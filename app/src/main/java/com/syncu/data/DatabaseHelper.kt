@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.*
 import com.syncu.api.HealthConnectManager
 import com.syncu.api.ExtendedHealthConnectManager
 import com.syncu.api.IntervalsWellnessApiClient
+import com.syncu.api.CoachWattsApiClient
 import com.syncu.utils.PreferencesManager
 import com.syncu.utils.SecureCredentialsManager
 import java.time.Instant
@@ -16,7 +17,7 @@ import java.time.temporal.ChronoUnit
 import kotlin.reflect.KClass
 
 /**
- * Database Helper with manual edit protection, data provenance, and dual caching (HC & Intervals)
+ * Database Helper with manual edit protection, data provenance, and multi-service caching
  */
 class DatabaseHelper(
     private val context: Context,
@@ -42,8 +43,9 @@ class DatabaseHelper(
             val sleepWindow = getAsleepWindow(sleep)
             refreshWellnessCache(date, sleepWindow.first, sleepWindow.second)
             
-            // 3. Force refresh Intervals
+            // 3. Force refresh Services
             refreshIntervalsCache(date)
+            refreshCoachWattsCache(date)
             
         } catch (e: Exception) {
             Log.e("SyncU_Data", "Error force loading data for $date", e)
@@ -52,14 +54,11 @@ class DatabaseHelper(
 
     /**
      * Extracts the "true" asleep window from a sleep session.
-     * Returns Pair(AsleepStartTime, AsleepEndTime).
-     * This excludes leading and trailing "Awake" periods.
      */
     private fun getAsleepWindow(sleep: SleepSession?): Pair<Instant?, Instant?> {
         if (sleep == null) return Pair(null, null)
         
         val intervals = sleep.stageIntervals?.split(";") ?: return Pair(sleep.startTime, sleep.endTime)
-        // Sleep stages: 2 (Generic), 4 (Light), 5 (Deep), 6 (REM)
         val sleepStageIds = listOf("2", "4", "5", "6")
         
         val sleepIntervals = intervals.mapNotNull { interval ->
@@ -85,6 +84,7 @@ class DatabaseHelper(
             val cutoffDate = LocalDate.now().minusDays(retentionDays.toLong())
             database.wellnessDao().deleteWellnessBefore(cutoffDate)
             database.intervalsDao().deleteWellnessBefore(cutoffDate)
+            database.coachWattsDao().deleteWellnessBefore(cutoffDate)
         } catch (e: Exception) {
             Log.e("SyncU_Data", "Error purging cache", e)
         }
@@ -102,7 +102,6 @@ class DatabaseHelper(
             caloriesBurned = totalCalories,
             activeMinutes = activeMinutes,
             restingHR = wellness?.restingHR,
-            maxHR = wellness?.maxHR,
             hrvMs = wellness?.hrvMs,
             weightKg = wellness?.weightKg,
             bodyFatPercentage = wellness?.bodyFatPercentage,
@@ -130,9 +129,7 @@ class DatabaseHelper(
             if (result.isSuccess) {
                 val data = result.getOrNull()
                 if (data != null) {
-                    // Fetch existing record to preserve lastSyncedAt
                     val existing = database.intervalsDao().getWellnessForDate(date)
-                    
                     val record = IntervalsWellnessRecord(
                         date = date,
                         weight = data.weight,
@@ -146,8 +143,6 @@ class DatabaseHelper(
                         diastolic = data.diastolic,
                         bloodGlucose = data.bloodGlucose,
                         bodyFat = data.bodyFat,
-                        leanMass = data.leanMass,
-                        boneMass = data.boneMass,
                         vo2max = data.vo2max,
                         steps = data.steps,
                         respiration = data.respiration,
@@ -158,8 +153,58 @@ class DatabaseHelper(
                         lastSyncedAt = existing?.lastSyncedAt
                     )
                     database.intervalsDao().insertWellness(record)
+                    data.lastSyncedAt = existing?.lastSyncedAt
                 }
                 return data
+            }
+        }
+        return null
+    }
+
+    suspend fun refreshCoachWattsCache(date: LocalDate): CoachWattsWellnessRecord? {
+        val credentialsManager = SecureCredentialsManager(context)
+        val token = credentialsManager.getCoachWattsToken()
+
+        if (token != null) {
+            val client = CoachWattsApiClient(token)
+            val result = client.getWellnessForDate(date)
+            if (result.isSuccess) {
+                val json = result.getOrNull()
+                if (json != null) {
+                    try {
+                        val gson = com.google.gson.Gson()
+                        val data = gson.fromJson(json, CoachWattsWellnessData::class.java)
+                        val existing = database.coachWattsDao().getWellnessForDate(date)
+                        val record = CoachWattsWellnessRecord(
+                            date = date,
+                            weight = data.weight,
+                            restingHR = data.resting_hr,
+                            hrv = data.hrv,
+                            sleepMinutes = data.sleep_minutes,
+                            avgSleepingHR = data.avg_sleeping_hr,
+                            spO2 = data.spo2,
+                            systolic = data.systolic,
+                            diastolic = data.diastolic,
+                            glucose = data.glucose,
+                            bodyFat = data.body_fat,
+                            leanMass = data.lean_mass,
+                            boneMass = data.bone_mass,
+                            vo2max = data.vo2max,
+                            steps = data.steps,
+                            respiration = data.respiration,
+                            calories = data.calories,
+                            carbs = data.carbs,
+                            protein = data.protein,
+                            fat = data.fat,
+                            lastUpdated = Instant.now(),
+                            lastSyncedAt = existing?.lastSyncedAt
+                        )
+                        database.coachWattsDao().insertWellness(record)
+                        return record
+                    } catch (e: Exception) {
+                        Log.e("SyncU_Data", "Error parsing CoachWatts data", e)
+                    }
+                }
             }
         }
         return null
@@ -168,15 +213,12 @@ class DatabaseHelper(
     suspend fun getDailySummary(date: LocalDate): DailySummary {
         val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
         val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
-
         val isToday = date == LocalDate.now()
         
-        // 1. Fetch Permissions first to filter cache
         val permissions = healthManager.getGrantedPermissions()
         fun has(recordType: KClass<out androidx.health.connect.client.records.Record>) = 
             permissions.contains(HealthPermission.getReadPermission(recordType).toString())
 
-        // 2. Smart Sleep cache (Needed for resting HR logic)
         val sleepList = database.sleepDao().getSleepForDateRange(startOfDay.toEpochMilli(), endOfDay.toEpochMilli())
         var sleep = sleepList.firstOrNull()
         if (sleep == null || isToday) {
@@ -187,16 +229,12 @@ class DatabaseHelper(
             }
         }
         
-        // Clear cached sleep if permission revoked
-        if (!has(androidx.health.connect.client.records.SleepSessionRecord::class)) {
-            sleep = null
-        }
+        if (!has(androidx.health.connect.client.records.SleepSessionRecord::class)) sleep = null
 
-        // 3. Smart Wellness (HC) cache
         var wellnessRecord = database.wellnessDao().getWellnessForDate(date)
         val shouldRefreshWellness = wellnessRecord == null || 
-                (isToday && ChronoUnit.MINUTES.between(wellnessRecord.lastUpdated, Instant.now()) > 5) ||
-                (ChronoUnit.HOURS.between(wellnessRecord.lastUpdated, Instant.now()) > 24)
+                (isToday && (wellnessRecord.lastUpdated == null || ChronoUnit.MINUTES.between(wellnessRecord.lastUpdated, Instant.now()) > 5)) ||
+                (wellnessRecord.lastUpdated != null && ChronoUnit.HOURS.between(wellnessRecord.lastUpdated, Instant.now()) > 24)
 
         if (shouldRefreshWellness) {
             val sleepWindow = getAsleepWindow(sleep)
@@ -204,13 +242,11 @@ class DatabaseHelper(
             wellnessRecord = database.wellnessDao().getWellnessForDate(date)
         }
 
-        // IMPORTANT: Clear cached wellness fields if permission revoked
         wellnessRecord = wellnessRecord?.let {
             it.copy(
                 steps = if (has(androidx.health.connect.client.records.StepsRecord::class)) it.steps else null,
                 caloriesBurned = if (has(androidx.health.connect.client.records.ActiveCaloriesBurnedRecord::class)) it.caloriesBurned else null,
                 restingHR = if (has(androidx.health.connect.client.records.RestingHeartRateRecord::class) || has(androidx.health.connect.client.records.HeartRateRecord::class)) it.restingHR else null,
-                maxHR = if (has(androidx.health.connect.client.records.HeartRateRecord::class)) it.maxHR else null,
                 hrvMs = if (has(androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord::class)) it.hrvMs else null,
                 weightKg = if (has(androidx.health.connect.client.records.WeightRecord::class)) it.weightKg else null,
                 bodyFatPercentage = if (has(androidx.health.connect.client.records.BodyFatRecord::class)) it.bodyFatPercentage else null,
@@ -225,15 +261,13 @@ class DatabaseHelper(
             )
         }
 
-        // 4. Smart Intervals cache
+        // Intervals cache
         val intervalsRecord = database.intervalsDao().getWellnessForDate(date)
         val shouldRefreshIntervals = intervalsRecord == null || 
-                (isToday && ChronoUnit.MINUTES.between(intervalsRecord.lastUpdated, Instant.now()) > 5) ||
-                (ChronoUnit.HOURS.between(intervalsRecord.lastUpdated, Instant.now()) > 24)
+                (isToday && (intervalsRecord.lastUpdated == null || ChronoUnit.MINUTES.between(intervalsRecord.lastUpdated, Instant.now()) > 5)) ||
+                (intervalsRecord.lastUpdated != null && ChronoUnit.HOURS.between(intervalsRecord.lastUpdated, Instant.now()) > 24)
         
-        val intervalsData = if (shouldRefreshIntervals) {
-            refreshIntervalsCache(date)
-        } else {
+        val intervalsData = if (shouldRefreshIntervals) refreshIntervalsCache(date) else {
             IntervalsWellnessData(
                 id = date.toString(),
                 weight = intervalsRecord.weight,
@@ -247,24 +281,77 @@ class DatabaseHelper(
                 diastolic = intervalsRecord.diastolic,
                 bloodGlucose = intervalsRecord.bloodGlucose,
                 bodyFat = intervalsRecord.bodyFat,
-                leanMass = intervalsRecord.leanMass,
-                boneMass = intervalsRecord.boneMass,
                 vo2max = intervalsRecord.vo2max,
                 steps = intervalsRecord.steps,
                 respiration = intervalsRecord.respiration,
                 carbohydrates = intervalsRecord.carbohydrates,
                 protein = intervalsRecord.protein,
                 fatTotal = intervalsRecord.fatTotal,
-                lastUpdated = intervalsRecord.lastUpdated,
                 lastSyncedAt = intervalsRecord.lastSyncedAt
             )
         }
 
-        // 5. Build Provenance
+        // CoachWatts cache
+        val cwRecord = database.coachWattsDao().getWellnessForDate(date)
+        val shouldRefreshCW = cwRecord == null || 
+                (isToday && (cwRecord.lastUpdated == null || ChronoUnit.MINUTES.between(cwRecord.lastUpdated, Instant.now()) > 5)) ||
+                (cwRecord.lastUpdated != null && ChronoUnit.HOURS.between(cwRecord.lastUpdated, Instant.now()) > 24)
+        
+        val cwData = if (shouldRefreshCW) {
+            val refreshed = refreshCoachWattsCache(date)
+            refreshed?.let { CoachWattsWellnessData(
+                date = date.toString(),
+                weight = it.weight,
+                resting_hr = it.restingHR,
+                hrv = it.hrv,
+                sleep_seconds = it.sleepMinutes?.times(60),
+                spo2 = it.spO2,
+                systolic = it.systolic,
+                diastolic = it.diastolic,
+                glucose = it.glucose,
+                body_fat = it.bodyFat,
+                lean_mass = it.leanMass,
+                bone_mass = it.boneMass,
+                vo2max = it.vo2max,
+                steps = it.steps,
+                respiration = it.respiration,
+                calories = it.calories,
+                avg_sleeping_hr = it.avgSleepingHR,
+                carbs = it.carbs,
+                protein = it.protein,
+                fat = it.fat,
+                lastSyncedAt = it.lastSyncedAt
+            ) }
+        } else {
+            cwRecord?.let { CoachWattsWellnessData(
+                date = date.toString(),
+                weight = it.weight,
+                resting_hr = it.restingHR,
+                hrv = it.hrv,
+                sleep_seconds = it.sleepMinutes?.times(60),
+                spo2 = it.spO2,
+                systolic = it.systolic,
+                diastolic = it.diastolic,
+                glucose = it.glucose,
+                body_fat = it.bodyFat,
+                lean_mass = it.leanMass,
+                bone_mass = it.boneMass,
+                vo2max = it.vo2max,
+                steps = it.steps,
+                respiration = it.respiration,
+                calories = it.calories,
+                avg_sleeping_hr = it.avgSleepingHR,
+                carbs = it.carbs,
+                protein = it.protein,
+                fat = it.fat,
+                lastSyncedAt = it.lastSyncedAt
+            ) }
+        }
+
         val provenance = DataProvenance(
             stepsSource = buildStepsProvenance(wellnessRecord?.steps),
             caloriesSource = buildCaloriesProvenance(wellnessRecord?.caloriesBurned),
-            heartRateSource = buildHeartRateProvenance(wellnessRecord?.maxHR, sleep?.avgHeartRate),
+            heartRateSource = buildHeartRateProvenance(wellnessRecord?.restingHR, sleep?.avgHeartRate),
             sleepSource = sleep?.sourceInfo,
             weightSource = buildWeightProvenance(wellnessRecord?.weightKg),
             bodyCompositionSource = buildBodyCompProvenance(wellnessRecord),
@@ -279,7 +366,6 @@ class DatabaseHelper(
             activeMinutes = wellnessRecord?.activeMinutes,
             sleep = sleep,
             restingHR = wellnessRecord?.restingHR,
-            maxHR = wellnessRecord?.maxHR,
             hrvMs = wellnessRecord?.hrvMs,
             weightKg = wellnessRecord?.weightKg,
             bodyFatPercentage = wellnessRecord?.bodyFatPercentage,
@@ -293,6 +379,7 @@ class DatabaseHelper(
             respiratoryRate = wellnessRecord?.respiratoryRate,
             dataProvenance = provenance,
             intervalsWellness = intervalsData,
+            coachWattsWellness = cwData,
             grantedPermissions = permissions
         )
     }
@@ -302,11 +389,11 @@ class DatabaseHelper(
     private fun buildWeightProvenance(weight: Double?): String? = weight?.let { "Health Connect: ${"%.1f".format(it)} kg" }
     private fun buildHrvProvenance(hrv: Double?): String? = hrv?.let { "Health Connect: ${it.toInt()} ms (avg)" }
 
-    private fun buildHeartRateProvenance(maxHR: Int?, sleepHR: Int?): String? {
-        if (maxHR == null && sleepHR == null) return null
+    private fun buildHeartRateProvenance(restingHR: Int?, sleepHR: Int?): String? {
+        if (restingHR == null && sleepHR == null) return null
         val parts = mutableListOf<String>()
-        sleepHR?.let { parts.add("Sleep ${it}") }
-        maxHR?.let { parts.add("Max ${it}") }
+        sleepHR?.let { parts.add("Sleep $it") }
+        restingHR?.let { parts.add("Resting $it") }
         return "Health Connect: ${parts.joinToString(", ")} bpm"
     }
 

@@ -43,7 +43,7 @@ import java.util.Locale
 
 /**
  * Setup Activity - First-time setup wizard & Settings
- * Handles Health Connect permissions, intervals.icu credentials, cache settings and background sync scheduling
+ * Handles Health Connect permissions, credentials, cache settings and background sync scheduling
  */
 class SetupActivity : AppCompatActivity() {
 
@@ -52,6 +52,8 @@ class SetupActivity : AppCompatActivity() {
     
     private lateinit var etApiKey: TextInputEditText
     private lateinit var etAthleteId: TextInputEditText
+    private lateinit var etCoachWattsToken: TextInputEditText
+    
     private lateinit var btnHealthConnect: Button
     private lateinit var btnFooterBack: Button
     private lateinit var btnFooterSave: Button
@@ -68,6 +70,8 @@ class SetupActivity : AppCompatActivity() {
 
     private var initialApiKey: String? = ""
     private var initialAthleteId: String? = ""
+    private var initialCoachWattsToken: String? = ""
+    
     private var initialAutoSync: Boolean = true
     private var initialCustomRestingHR: Boolean = false
     private var initialRetentionDays: Int = 14
@@ -94,6 +98,8 @@ class SetupActivity : AppCompatActivity() {
         // Initialize views
         etApiKey = findViewById(R.id.etApiKey)
         etAthleteId = findViewById(R.id.etAthleteId)
+        etCoachWattsToken = findViewById(R.id.etCoachWattsToken)
+        
         btnHealthConnect = findViewById(R.id.btnHealthConnectPermissions)
         btnFooterBack = findViewById(R.id.btnFooterBack)
         btnFooterSave = findViewById(R.id.btnFooterSave)
@@ -190,6 +196,7 @@ class SetupActivity : AppCompatActivity() {
     private fun loadExistingCredentials() {
         initialApiKey = credentialsManager.getApiKey() ?: ""
         initialAthleteId = credentialsManager.getAthleteId() ?: ""
+        initialCoachWattsToken = credentialsManager.getCoachWattsToken() ?: ""
         
         initialAutoSync = preferencesManager.autoSyncEnabled
         initialCustomRestingHR = preferencesManager.useCustomRestingHR
@@ -200,6 +207,8 @@ class SetupActivity : AppCompatActivity() {
         
         etApiKey.setText(initialApiKey)
         etAthleteId.setText(initialAthleteId)
+        etCoachWattsToken.setText(initialCoachWattsToken)
+        
         switchAutoSync.isChecked = initialAutoSync
         switchCustomRestingHR.isChecked = initialCustomRestingHR
         sliderRetention.value = initialRetentionDays.toFloat()
@@ -240,6 +249,7 @@ class SetupActivity : AppCompatActivity() {
 
         etApiKey.addTextChangedListener(watcher)
         etAthleteId.addTextChangedListener(watcher)
+        etCoachWattsToken.addTextChangedListener(watcher)
         
         switchAutoSync.setOnClickListener { 
             val isChecked = switchAutoSync.isChecked
@@ -321,6 +331,8 @@ class SetupActivity : AppCompatActivity() {
     private fun checkForChanges() {
         val currentApiKey = etApiKey.text.toString().trim()
         val currentAthleteId = etAthleteId.text.toString().trim()
+        val currentCoachWattsToken = etCoachWattsToken.text.toString().trim()
+        
         val currentAutoSync = switchAutoSync.isChecked
         val currentCustomRestingHR = switchCustomRestingHR.isChecked
         val currentRetentionDays = sliderRetention.value.toInt()
@@ -330,6 +342,7 @@ class SetupActivity : AppCompatActivity() {
 
         val hasChanged = currentApiKey != initialApiKey ||
                 currentAthleteId != initialAthleteId ||
+                currentCoachWattsToken != initialCoachWattsToken ||
                 currentAutoSync != initialAutoSync ||
                 currentCustomRestingHR != initialCustomRestingHR ||
                 currentRetentionDays != initialRetentionDays ||
@@ -337,7 +350,10 @@ class SetupActivity : AppCompatActivity() {
                 currentSyncTime2 != initialSyncTime2 ||
                 currentSyncTime2Enabled != initialSyncTime2Enabled
 
-        btnFooterSave.isEnabled = hasChanged && currentApiKey.isNotEmpty() && currentAthleteId.isNotEmpty()
+        // Valid if at least one service has credentials or it's not the first setup
+        val anyCredentials = (currentApiKey.isNotEmpty() && currentAthleteId.isNotEmpty()) || currentCoachWattsToken.isNotEmpty()
+        
+        btnFooterSave.isEnabled = hasChanged && anyCredentials
     }
 
     private fun getBasePermissions(): Set<String> {
@@ -401,10 +417,16 @@ class SetupActivity : AppCompatActivity() {
     private fun finishSetup() {
         val apiKey = etApiKey.text.toString().trim()
         val athleteId = etAthleteId.text.toString().trim()
+        val cwToken = etCoachWattsToken.text.toString().trim()
 
-        if (!credentialsManager.saveCredentials(apiKey, athleteId)) {
-            Toast.makeText(this, "Error saving credentials", Toast.LENGTH_LONG).show()
-            return
+        // Save Intervals credentials
+        if (apiKey.isNotEmpty() && athleteId.isNotEmpty()) {
+            credentialsManager.saveCredentials(apiKey, athleteId)
+        }
+        
+        // Save CoachWatts credentials
+        if (cwToken.isNotEmpty()) {
+            credentialsManager.saveCoachWattsCredentials(cwToken)
         }
 
         preferencesManager.autoSyncEnabled = switchAutoSync.isChecked

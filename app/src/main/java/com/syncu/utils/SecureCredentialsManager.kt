@@ -8,7 +8,7 @@ import androidx.security.crypto.MasterKey
 
 /**
  * Secure Credentials Manager
- * Stores intervals.icu API credentials in encrypted storage
+ * Stores API credentials in encrypted storage
  */
 class SecureCredentialsManager(private val context: Context) {
 
@@ -27,75 +27,83 @@ class SecureCredentialsManager(private val context: Context) {
     companion object {
         private const val KEY_API_KEY = "intervals_api_key"
         private const val KEY_ATHLETE_ID = "intervals_athlete_id"
+        private const val KEY_COACHWATTS_TOKEN = "coachwatts_token"
     }
 
     /**
      * Save intervals.icu credentials
-     * Uses commit() for synchronous save to ensure data is persisted immediately
      */
     fun saveCredentials(apiKey: String, athleteId: String): Boolean {
         return try {
             val success = sharedPreferences.edit().apply {
                 putString(KEY_API_KEY, apiKey)
                 putString(KEY_ATHLETE_ID, athleteId)
-            }.commit()  // Use commit() for synchronous save
+            }.commit()
 
-            Log.d("CredentialsManager", "Save credentials result: $success")
-            Log.d("CredentialsManager", "Verification - API Key present: ${getApiKey() != null}")
-            Log.d("CredentialsManager", "Verification - Athlete ID present: ${getAthleteId() != null}")
-
+            Log.d("CredentialsManager", "Save Intervals credentials result: $success")
             success
         } catch (e: Exception) {
-            Log.e("CredentialsManager", "Error saving credentials", e)
+            Log.e("CredentialsManager", "Error saving Intervals credentials", e)
             false
         }
     }
 
     /**
-     * Get API key
+     * Save CoachWatts credentials
      */
-    fun getApiKey(): String? {
+    fun saveCoachWattsCredentials(token: String): Boolean {
         return try {
-            sharedPreferences.getString(KEY_API_KEY, null)
+            val success = sharedPreferences.edit().apply {
+                putString(KEY_COACHWATTS_TOKEN, token)
+            }.commit()
+
+            Log.d("CredentialsManager", "Save CoachWatts credentials result: $success")
+            success
         } catch (e: Exception) {
-            Log.e("CredentialsManager", "Error getting API key", e)
-            null
+            Log.e("CredentialsManager", "Error saving CoachWatts credentials", e)
+            false
         }
     }
 
     /**
-     * Get Athlete ID
+     * Get intervals.icu API key
      */
-    fun getAthleteId(): String? {
-        return try {
-            sharedPreferences.getString(KEY_ATHLETE_ID, null)
-        } catch (e: Exception) {
-            Log.e("CredentialsManager", "Error getting athlete ID", e)
-            null
-        }
+    fun getApiKey(): String? = sharedPreferences.getString(KEY_API_KEY, null)
+
+    /**
+     * Get intervals.icu Athlete ID
+     */
+    fun getAthleteId(): String? = sharedPreferences.getString(KEY_ATHLETE_ID, null)
+
+    /**
+     * Get CoachWatts Token
+     */
+    fun getCoachWattsToken(): String? = sharedPreferences.getString(KEY_COACHWATTS_TOKEN, null)
+
+    /**
+     * Check if intervals.icu credentials are saved
+     */
+    fun hasIntervalsCredentials(): Boolean {
+        return !getApiKey().isNullOrEmpty() && !getAthleteId().isNullOrEmpty()
     }
 
     /**
-     * Check if credentials are saved
+     * Check if CoachWatts credentials are saved
      */
-    fun hasCredentials(): Boolean {
-        val apiKey = getApiKey()
-        val athleteId = getAthleteId()
-        val hasCredentials = !apiKey.isNullOrEmpty() && !athleteId.isNullOrEmpty()
-
-        Log.d("CredentialsManager", "hasCredentials check:")
-        Log.d("CredentialsManager", "  - API Key present: ${!apiKey.isNullOrEmpty()}")
-        Log.d("CredentialsManager", "  - Athlete ID present: ${!athleteId.isNullOrEmpty()}")
-        Log.d("CredentialsManager", "  - Result: $hasCredentials")
-
-        return hasCredentials
+    fun hasCoachWattsCredentials(): Boolean {
+        return !getCoachWattsToken().isNullOrEmpty()
     }
+
+    /**
+     * Check if at least one service is configured
+     */
+    fun hasCredentials(): Boolean = hasIntervalsCredentials() || hasCoachWattsCredentials()
 
     /**
      * Clear all credentials
      */
     fun clearCredentials() {
         sharedPreferences.edit().clear().commit()
-        Log.d("CredentialsManager", "Credentials cleared")
+        Log.d("CredentialsManager", "All credentials cleared")
     }
 }

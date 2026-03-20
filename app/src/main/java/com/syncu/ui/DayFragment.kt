@@ -1,5 +1,6 @@
 package com.syncu.ui
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,228 +10,299 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.*
 import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.tabs.TabLayout
 import com.syncu.R
-import com.syncu.api.HealthConnectManager
+import com.syncu.api.CoachWattsApiClient
 import com.syncu.api.ExtendedHealthConnectManager
+import com.syncu.api.HealthConnectManager
 import com.syncu.api.IntervalsWellnessApiClient
-import com.syncu.data.AppDatabase
-import com.syncu.data.DatabaseHelper
-import com.syncu.data.DailySummary
+import com.syncu.data.*
 import com.syncu.utils.SecureCredentialsManager
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-import java.time.Instant
-import kotlin.math.abs
+import java.util.*
 import kotlin.math.roundToInt
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.*
 
-/**
- * Day Fragment with Side-by-Side Health Connect and Intervals data
- * Supports smart caching and manual refresh
- */
 class DayFragment : Fragment() {
 
-    private var date: LocalDate = LocalDate.now()
-    private lateinit var progressBar: ProgressBar
-    private lateinit var swipeRefresh: SwipeRefreshLayout
-    private lateinit var sleepChartView: SleepChartView
+    private lateinit var date: LocalDate
     private var currentSummary: DailySummary? = null
+    
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var progressBar: ProgressBar
+    private lateinit var tabLayout: TabLayout
+    private lateinit var ivServiceIcon: ImageView
+    private lateinit var ivServiceIconVitals: ImageView
+    private lateinit var ivServiceIconHeart: ImageView
+    private lateinit var ivServiceIconBody: ImageView
+    private lateinit var ivServiceIconSleep: ImageView
 
     // Cards
-    private lateinit var cardActivity: View
-    private lateinit var cardVitals: View
-    private lateinit var cardHeart: View
-    private lateinit var cardBody: View
-    private lateinit var cardSleep: View
+    private lateinit var cardActivity: CardView
+    private lateinit var cardVitals: CardView
+    private lateinit var cardHeart: CardView
+    private lateinit var cardBody: CardView
+    private lateinit var cardSleep: CardView
 
-    // Rows
+    // Activity Rows
     private lateinit var rowSteps: View
-    private lateinit var rowCalories: View
-    private lateinit var rowSystolic: View
-    private lateinit var rowDiastolic: View
-    private lateinit var rowSpO2: View
-    private lateinit var rowBloodGlucose: View
-    private lateinit var rowVO2Max: View
-    private lateinit var rowRespiratoryRate: View
-    private lateinit var rowRestingHR: View
-    private lateinit var rowSleepHR: View
-    private lateinit var rowHRV: View
-    private lateinit var rowWeight: View
-    private lateinit var rowBodyFat: View
-    private lateinit var rowLeanBodyMass: View
-    private lateinit var rowBoneMass: View
-
-    // Text Views
     private lateinit var tvSteps: TextView
-    private lateinit var tvStepsIntervals: TextView
+    private lateinit var tvStepsService: TextView
+    private lateinit var rowCalories: View
     private lateinit var tvCalories: TextView
-    private lateinit var tvCaloriesIntervals: TextView
+    private lateinit var tvCaloriesService: TextView
+
+    // Vitals Rows
+    private lateinit var rowSystolic: View
     private lateinit var tvSystolic: TextView
-    private lateinit var tvSystolicIntervals: TextView
+    private lateinit var tvSystolicService: TextView
+    private lateinit var rowDiastolic: View
     private lateinit var tvDiastolic: TextView
-    private lateinit var tvDiastolicIntervals: TextView
+    private lateinit var tvDiastolicService: TextView
+    private lateinit var rowSpO2: View
     private lateinit var tvSpO2: TextView
-    private lateinit var tvSpO2Intervals: TextView
+    private lateinit var tvSpO2Service: TextView
+    private lateinit var rowBloodGlucose: View
     private lateinit var tvBloodGlucose: TextView
-    private lateinit var tvBloodGlucoseIntervals: TextView
+    private lateinit var tvBloodGlucoseService: TextView
+    private lateinit var rowVO2Max: View
     private lateinit var tvVO2Max: TextView
-    private lateinit var tvVO2MaxIntervals: TextView
+    private lateinit var tvVO2MaxService: TextView
+    private lateinit var rowRespiratoryRate: View
     private lateinit var tvRespiratoryRate: TextView
-    private lateinit var tvRespiratoryRateIntervals: TextView
+    private lateinit var tvRespiratoryRateService: TextView
+
+    // Heart Rows
+    private lateinit var rowRestingHR: View
     private lateinit var tvRestingHR: TextView
-    private lateinit var tvRestingHRIntervals: TextView
+    private lateinit var tvRestingHRService: TextView
+    private lateinit var rowSleepHR: View
     private lateinit var tvSleepHR: TextView
-    private lateinit var tvSleepHRIntervals: TextView
+    private lateinit var tvSleepHRService: TextView
+    private lateinit var rowHRV: View
     private lateinit var tvHRV: TextView
-    private lateinit var tvHRVIntervals: TextView
+    private lateinit var tvHRVService: TextView
+
+    // Body Rows
+    private lateinit var rowWeight: View
     private lateinit var tvWeight: TextView
-    private lateinit var tvWeightIntervals: TextView
+    private lateinit var tvWeightService: TextView
+    private lateinit var rowBodyFat: View
     private lateinit var tvBodyFat: TextView
-    private lateinit var tvBodyFatIntervals: TextView
-    private lateinit var tvLeanBodyMass: TextView
-    private lateinit var tvLeanBodyMassIntervals: TextView
-    private lateinit var tvBoneMass: TextView
-    private lateinit var tvBoneMassIntervals: TextView
+    private lateinit var tvBodyFatService: TextView
+    private lateinit var rowLeanMass: View
+    private lateinit var tvLeanMass: TextView
+    private lateinit var tvLeanMassService: TextView
 
-    // Sleep Text Views
+    // Sleep Rows
+    private lateinit var rowSleepDuration: View
     private lateinit var tvSleepDuration: TextView
-    private lateinit var tvSleepDurationIntervals: TextView
+    private lateinit var tvSleepDurationService: TextView
+    
+    private lateinit var rowSleepAsleep: View
     private lateinit var tvSleepAsleep: TextView
-    private lateinit var tvSleepAsleepIntervals: TextView
-    private lateinit var tvSleepAwakeDetail: TextView
-    private lateinit var tvSleepAwakePercent: TextView
-    private lateinit var tvSleepREMDetail: TextView
-    private lateinit var tvSleepREMPercent: TextView
-    private lateinit var tvSleepLightDetail: TextView
-    private lateinit var tvSleepLightPercent: TextView
-    private lateinit var tvSleepDeepDetail: TextView
-    private lateinit var tvSleepDeepPercent: TextView
+    private lateinit var tvSleepAsleepService: TextView
+    
+    private lateinit var sleepChartView: SleepChartView
+    
+    private lateinit var rowAwakeSleep: View
+    private lateinit var tvAwakeSleep: TextView
+    private lateinit var tvAwakeSleepPercent: TextView
+    
+    private lateinit var rowRemSleep: View
+    private lateinit var tvRemSleep: TextView
+    private lateinit var tvRemSleepPercent: TextView
+    
+    private lateinit var rowLightSleep: View
+    private lateinit var tvLightSleep: TextView
+    private lateinit var tvLightSleepPercent: TextView
+    
+    private lateinit var rowDeepSleep: View
+    private lateinit var tvDeepSleep: TextView
+    private lateinit var tvDeepSleepPercent: TextView
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            val dateString = it.getString(ARG_DATE)
-            dateString?.let { str ->
-                try {
-                    date = LocalDate.parse(str)
-                } catch (e: Exception) {
-                    Log.e("DayFragment", "Error parsing date: $str", e)
-                }
-            }
-        }
+    private var services = listOf<String>()
+    private var selectedServiceIndex = 0
 
-        parentFragmentManager.setFragmentResultListener("refresh_data", this) { _, _ ->
-            loadDayData(forceRefresh = true)
+    companion object {
+        private const val ARG_DATE = "date"
+        fun newInstance(date: LocalDate) = DayFragment().apply {
+            arguments = Bundle().apply { putString(ARG_DATE, date.toString()) }
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_day, container, false)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        date = LocalDate.parse(requireArguments().getString(ARG_DATE))
+        
+        val creds = SecureCredentialsManager(requireContext())
+        val list = mutableListOf<String>()
+        if (creds.getApiKey() != null) list.add("Intervals.icu")
+        if (creds.getCoachWattsToken() != null) list.add("CoachWatts")
+        services = list
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.fragment_day, container, false)
+        initViews(view)
+        setupTabs(view)
+        setupSwipeRefresh()
+        setupExpandCollapse(view)
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        try {
-            initializeViews(view)
-            setupExpandCollapse(view)
-            setupSwipeRefresh()
-            loadDayData(forceRefresh = false) // Use cache on initial swipe
-        } catch (e: Exception) {
-            Log.e("DayFragment", "Error in onViewCreated", e)
-        }
+        loadDayData(forceRefresh = false)
     }
 
-    private fun initializeViews(view: View) {
-        progressBar = view.findViewById(R.id.progressBar)
+    private fun initViews(view: View) {
         swipeRefresh = view.findViewById(R.id.swipeRefresh)
+        progressBar = view.findViewById(R.id.progressBar)
+        tabLayout = view.findViewById(R.id.tabLayoutServices)
+        ivServiceIcon = view.findViewById(R.id.ivServiceIcon)
+        ivServiceIconVitals = view.findViewById(R.id.ivServiceIconVitals)
+        ivServiceIconHeart = view.findViewById(R.id.ivServiceIconHeart)
+        ivServiceIconBody = view.findViewById(R.id.ivServiceIconBody)
+        ivServiceIconSleep = view.findViewById(R.id.ivServiceIconSleep)
 
-        // Cards
         cardActivity = view.findViewById(R.id.cardActivity)
         cardVitals = view.findViewById(R.id.cardVitals)
         cardHeart = view.findViewById(R.id.cardHeart)
         cardBody = view.findViewById(R.id.cardBody)
         cardSleep = view.findViewById(R.id.cardSleep)
 
-        // Activity Card
+        // Rows
+        rowSteps = view.findViewById(R.id.rowSteps)
         tvSteps = view.findViewById(R.id.tvSteps)
-        tvStepsIntervals = view.findViewById(R.id.tvStepsIntervals)
-        tvCalories = view.findViewById(R.id.tvCalories)
-        tvCaloriesIntervals = view.findViewById(R.id.tvCaloriesIntervals)
-        rowSteps = tvSteps.parent as View
-        rowCalories = tvCalories.parent as View
-
-        // Vitals Card
-        tvSystolic = view.findViewById(R.id.tvSystolic)
-        tvSystolicIntervals = view.findViewById(R.id.tvSystolicIntervals)
-        tvDiastolic = view.findViewById(R.id.tvDiastolic)
-        tvDiastolicIntervals = view.findViewById(R.id.tvDiastolicIntervals)
-        tvSpO2 = view.findViewById(R.id.tvSpO2)
-        tvSpO2Intervals = view.findViewById(R.id.tvSpO2Intervals)
-        tvBloodGlucose = view.findViewById(R.id.tvBloodGlucose)
-        tvBloodGlucoseIntervals = view.findViewById(R.id.tvBloodGlucoseIntervals)
-        tvVO2Max = view.findViewById(R.id.tvVO2Max)
-        tvVO2MaxIntervals = view.findViewById(R.id.tvVO2MaxIntervals)
-        tvRespiratoryRate = view.findViewById(R.id.tvRespiratoryRate)
-        tvRespiratoryRateIntervals = view.findViewById(R.id.tvRespiratoryRateIntervals)
-        rowSystolic = tvSystolic.parent as View
-        rowDiastolic = tvDiastolic.parent as View
-        rowSpO2 = tvSpO2.parent as View
-        rowBloodGlucose = tvBloodGlucose.parent as View
-        rowVO2Max = tvVO2Max.parent as View
-        rowRespiratoryRate = tvRespiratoryRate.parent as View
-
-        // Heart Card
-        tvRestingHR = view.findViewById(R.id.tvRestingHR)
-        tvRestingHRIntervals = view.findViewById(R.id.tvRestingHRIntervals)
-        tvSleepHR = view.findViewById(R.id.tvSleepHR)
-        tvSleepHRIntervals = view.findViewById(R.id.tvSleepHRIntervals)
-        tvHRV = view.findViewById(R.id.tvHRV)
-        tvHRVIntervals = view.findViewById(R.id.tvHRVIntervals)
-        rowRestingHR = tvRestingHR.parent as View
-        rowSleepHR = tvSleepHR.parent as View
-        rowHRV = tvHRV.parent as View
-
-        // Body Card
-        tvWeight = view.findViewById(R.id.tvWeight)
-        tvWeightIntervals = view.findViewById(R.id.tvWeightIntervals)
-        tvBodyFat = view.findViewById(R.id.tvBodyFat)
-        tvBodyFatIntervals = view.findViewById(R.id.tvBodyFatIntervals)
-        tvLeanBodyMass = view.findViewById(R.id.tvLeanBodyMass)
-        tvLeanBodyMassIntervals = view.findViewById(R.id.tvLeanBodyMassIntervals)
-        tvBoneMass = view.findViewById(R.id.tvBoneMass)
-        tvBoneMassIntervals = view.findViewById(R.id.tvBoneMassIntervals)
-        rowWeight = tvWeight.parent as View
-        rowBodyFat = tvBodyFat.parent as View
-        rowLeanBodyMass = tvLeanBodyMass.parent as View
-        rowBoneMass = tvBoneMass.parent as View
-
-        // Sleep Card
-        sleepChartView = view.findViewById(R.id.sleepChartView)
-        tvSleepDuration = view.findViewById(R.id.tvSleepDuration)
-        tvSleepDurationIntervals = view.findViewById(R.id.tvSleepDurationIntervals)
-        tvSleepAsleep = view.findViewById(R.id.tvSleepAsleep)
-        tvSleepAsleepIntervals = view.findViewById(R.id.tvSleepAsleepIntervals)
+        tvStepsService = view.findViewById(R.id.tvStepsIntervals)
         
-        // Detailed Sleep Views
-        tvSleepAwakeDetail = view.findViewById(R.id.tvSleepAwakeDetail)
-        tvSleepAwakePercent = view.findViewById(R.id.tvSleepAwakePercent)
-        tvSleepREMDetail = view.findViewById(R.id.tvSleepREMDetail)
-        tvSleepREMPercent = view.findViewById(R.id.tvSleepREMPercent)
-        tvSleepLightDetail = view.findViewById(R.id.tvSleepLightDetail)
-        tvSleepLightPercent = view.findViewById(R.id.tvSleepLightPercent)
-        tvSleepDeepDetail = view.findViewById(R.id.tvSleepDeepDetail)
-        tvSleepDeepPercent = view.findViewById(R.id.tvSleepDeepPercent)
+        rowCalories = view.findViewById(R.id.rowCalories)
+        tvCalories = view.findViewById(R.id.tvCalories)
+        tvCaloriesService = view.findViewById(R.id.tvCaloriesIntervals)
+
+        rowSystolic = view.findViewById(R.id.rowSystolic)
+        tvSystolic = view.findViewById(R.id.tvSystolic)
+        tvSystolicService = view.findViewById(R.id.tvSystolicIntervals)
+
+        rowDiastolic = view.findViewById(R.id.rowDiastolic)
+        tvDiastolic = view.findViewById(R.id.tvDiastolic)
+        tvDiastolicService = view.findViewById(R.id.tvDiastolicIntervals)
+
+        rowSpO2 = view.findViewById(R.id.rowSpO2)
+        tvSpO2 = view.findViewById(R.id.tvSpO2)
+        tvSpO2Service = view.findViewById(R.id.tvSpO2Intervals)
+
+        rowBloodGlucose = view.findViewById(R.id.rowBloodGlucose)
+        tvBloodGlucose = view.findViewById(R.id.tvBloodGlucose)
+        tvBloodGlucoseService = view.findViewById(R.id.tvBloodGlucoseIntervals)
+
+        rowVO2Max = view.findViewById(R.id.rowVO2Max)
+        tvVO2Max = view.findViewById(R.id.tvVO2Max)
+        tvVO2MaxService = view.findViewById(R.id.tvVO2MaxIntervals)
+
+        rowRespiratoryRate = view.findViewById(R.id.rowRespiratoryRate)
+        tvRespiratoryRate = view.findViewById(R.id.tvRespiratoryRate)
+        tvRespiratoryRateService = view.findViewById(R.id.tvRespiratoryRateIntervals)
+
+        rowRestingHR = view.findViewById(R.id.rowRestingHR)
+        tvRestingHR = view.findViewById(R.id.tvRestingHR)
+        tvRestingHRService = view.findViewById(R.id.tvRestingHRIntervals)
+
+        rowSleepHR = view.findViewById(R.id.rowSleepHR)
+        tvSleepHR = view.findViewById(R.id.tvSleepHR)
+        tvSleepHRService = view.findViewById(R.id.tvSleepHRIntervals)
+
+        rowHRV = view.findViewById(R.id.rowHRV)
+        tvHRV = view.findViewById(R.id.tvHRV)
+        tvHRVService = view.findViewById(R.id.tvHRVIntervals)
+
+        rowWeight = view.findViewById(R.id.rowWeight)
+        tvWeight = view.findViewById(R.id.tvWeight)
+        tvWeightService = view.findViewById(R.id.tvWeightIntervals)
+
+        rowBodyFat = view.findViewById(R.id.rowBodyFat)
+        tvBodyFat = view.findViewById(R.id.tvBodyFat)
+        tvBodyFatService = view.findViewById(R.id.tvBodyFatIntervals)
+
+        rowLeanMass = view.findViewById(R.id.rowLeanBodyMass)
+        tvLeanMass = view.findViewById(R.id.tvLeanBodyMass)
+        tvLeanMassService = view.findViewById(R.id.tvLeanBodyMassIntervals)
+
+        rowSleepDuration = view.findViewById(R.id.rowSleepDuration)
+        tvSleepDuration = view.findViewById(R.id.tvSleepDuration)
+        tvSleepDurationService = view.findViewById(R.id.tvSleepDurationIntervals)
+        
+        rowSleepAsleep = view.findViewById(R.id.rowSleepAsleep)
+        tvSleepAsleep = view.findViewById(R.id.tvSleepAsleep)
+        tvSleepAsleepService = view.findViewById(R.id.tvSleepAsleepIntervals)
+        
+        sleepChartView = view.findViewById(R.id.sleepChartView)
+
+        rowAwakeSleep = view.findViewById(R.id.rowSleepAwakeDetail)
+        tvAwakeSleep = view.findViewById(R.id.tvSleepAwakeDetail)
+        tvAwakeSleepPercent = view.findViewById(R.id.tvSleepAwakePercent)
+
+        rowRemSleep = view.findViewById(R.id.rowSleepREMDetail)
+        tvRemSleep = view.findViewById(R.id.tvSleepREMDetail)
+        tvRemSleepPercent = view.findViewById(R.id.tvSleepREMPercent)
+
+        rowLightSleep = view.findViewById(R.id.rowSleepLightDetail)
+        tvLightSleep = view.findViewById(R.id.tvSleepLightDetail)
+        tvLightSleepPercent = view.findViewById(R.id.tvSleepLightPercent)
+
+        rowDeepSleep = view.findViewById(R.id.rowSleepDeepDetail)
+        tvDeepSleep = view.findViewById(R.id.tvSleepDeepDetail)
+        tvDeepSleepPercent = view.findViewById(R.id.tvSleepDeepPercent)
+    }
+
+    private fun setupTabs(view: View) {
+        tabLayout.removeAllTabs()
+        services.forEach { service ->
+            tabLayout.addTab(tabLayout.newTab().setText(service))
+        }
+
+        if (services.size <= 1) {
+            tabLayout.visibility = View.GONE
+        } else {
+            tabLayout.visibility = View.VISIBLE
+        }
+
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                selectedServiceIndex = tab?.position ?: 0
+                updateServiceIcons()
+                currentSummary?.let { displaySummary(it) }
+                updateActivitySyncTimestamp()
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+        
+        updateServiceIcons()
+    }
+
+    private fun updateServiceIcons() {
+        if (services.isEmpty()) return
+        val iconRes = if (services[selectedServiceIndex] == "Intervals.icu") {
+            R.mipmap.ic_intervals_icon
+        } else {
+            R.drawable.ic_syncu_logo 
+        }
+        ivServiceIcon.setImageResource(iconRes)
+        ivServiceIconVitals.setImageResource(iconRes)
+        ivServiceIconHeart.setImageResource(iconRes)
+        ivServiceIconBody.setImageResource(iconRes)
+        ivServiceIconSleep.setImageResource(iconRes)
     }
 
     private fun setupSwipeRefresh() {
@@ -247,24 +319,35 @@ class DayFragment : Fragment() {
 
     fun syncDataToIntervals() {
         val summary = currentSummary ?: return
+        val serviceName = if (services.isNotEmpty()) services[selectedServiceIndex] else "Intervals.icu"
+        
         lifecycleScope.launch {
             try {
                 progressBar.visibility = View.VISIBLE
-                val credentialsManager = SecureCredentialsManager(requireContext())
-                val apiKey = credentialsManager.getApiKey()
-                val athleteId = credentialsManager.getAthleteId()
-                if (apiKey != null && athleteId != null) {
-                    val client = IntervalsWellnessApiClient(apiKey, athleteId)
-                    val result = client.uploadWellnessData(summary)
-                    if (result.isSuccess) {
-                        Toast.makeText(requireContext(), "Synced!", Toast.LENGTH_SHORT).show()
-                        
-                        // Update local DB lastSyncedAt timestamp manually
-                        val database = AppDatabase.getDatabase(requireContext(), charArrayOf())
-                        database.intervalsDao().updateLastSyncedAt(date, Instant.now())
-                        
-                        loadDayData(forceRefresh = true)
+                val creds = SecureCredentialsManager(requireContext())
+                
+                val result = if (serviceName == "Intervals.icu") {
+                    val client = IntervalsWellnessApiClient(creds.getApiKey()!!, creds.getAthleteId()!!)
+                    client.uploadWellnessData(summary)
+                } else {
+                    val client = CoachWattsApiClient(creds.getCoachWattsToken()!!)
+                    client.uploadWellnessData(summary)
+                }
+
+                if (result.isSuccess) {
+                    Toast.makeText(requireContext(), "Synced to $serviceName!", Toast.LENGTH_SHORT).show()
+                    val now = Instant.now()
+                    if (serviceName == "Intervals.icu") {
+                        AppDatabase.getDatabase(requireContext(), charArrayOf()).intervalsDao().updateLastSyncedAt(date, now)
+                        currentSummary?.intervalsWellness?.lastSyncedAt = now
+                    } else {
+                        AppDatabase.getDatabase(requireContext(), charArrayOf()).coachWattsDao().updateLastSyncedAt(date, now)
+                        currentSummary?.coachWattsWellness?.lastSyncedAt = now
                     }
+                    updateActivitySyncTimestamp()
+                    loadDayData(forceRefresh = true)
+                } else {
+                    Toast.makeText(requireContext(), "Sync failed", Toast.LENGTH_LONG).show()
                 }
                 progressBar.visibility = View.GONE
             } catch (e: Exception) {
@@ -288,81 +371,20 @@ class DayFragment : Fragment() {
         loadDayData(forceRefresh = false)
     }
 
-    /**
-     * Called by MainActivity to ensure the sync button enabled state is correct
-     */
     fun refreshSyncButtonStatus() {
         if (!isAdded || isDetached) return
-        
         val summary = currentSummary ?: return
-        val intervals = summary.intervalsWellness
-
-        // 1. Identify what HC actually has. We only sync non-zero/non-null data.
-        val hcSleepMinutes = (summary.sleep?.asleepDurationMinutes ?: summary.sleep?.durationMinutes ?: 0L).toInt()
         
         fun isMeaningful(n: Number?): Boolean {
             val d = n?.toDouble() ?: 0.0
-            return d > 0.05 // Avoid tiny noise
+            return d > 0.05
         }
 
-        val hcHasData = isMeaningful(summary.steps) || 
-                        isMeaningful(summary.restingHR) || 
-                        isMeaningful(summary.hrvMs) || 
-                        isMeaningful(summary.weightKg) || 
-                        hcSleepMinutes > 0 ||
-                        isMeaningful(summary.systolicBP) ||
-                        isMeaningful(summary.caloriesBurned) ||
-                        isMeaningful(summary.spo2Percentage) ||
-                        isMeaningful(summary.glucoseMmol) ||
-                        isMeaningful(summary.vo2Max) ||
-                        isMeaningful(summary.respiratoryRate)
+        val hcSleepMinutes = (summary.sleep?.asleepDurationMinutes ?: summary.sleep?.durationMinutes ?: 0L).toInt()
+        val hasHCData = isMeaningful(summary.steps) || isMeaningful(summary.restingHR) || 
+                        isMeaningful(summary.hrvMs) || hcSleepMinutes > 0 || isMeaningful(summary.weightKg)
 
-        if (!hcHasData) {
-            (activity as? MainActivity)?.setSyncButtonEnabled(false)
-            return
-        }
-
-        if (intervals == null) {
-            (activity as? MainActivity)?.setSyncButtonEnabled(true)
-            return
-        }
-
-        // 2. Compare only what HC is providing.
-        
-        fun hasDiff(hc: Number?, int: Number?, isInt: Boolean = true): Boolean {
-            if (!isMeaningful(hc)) return false // HC has nothing to provide
-            
-            val hcVal = hc!!.toDouble()
-            val intVal = int?.toDouble() ?: 0.0
-            
-            return if (isInt) {
-                hcVal.toInt() != intVal.toInt()
-            } else {
-                abs(hcVal - intVal) > 0.05
-            }
-        }
-
-        val diffs = mutableMapOf<String, Boolean>()
-        diffs["steps"] = hasDiff(summary.steps, intervals.steps)
-        diffs["kcal"] = hasDiff(summary.caloriesBurned, intervals.kcalConsumed)
-        diffs["restHR"] = hasDiff(summary.restingHR, intervals.restingHR)
-        diffs["hrv"] = hasDiff(summary.hrvMs, intervals.hrv, false)
-        diffs["weight"] = hasDiff(summary.weightKg, intervals.weight, false)
-        diffs["fat"] = hasDiff(summary.bodyFatPercentage, intervals.bodyFat, false)
-        diffs["systolic"] = hasDiff(summary.systolicBP, intervals.systolic)
-        diffs["diastolic"] = hasDiff(summary.diastolicBP, intervals.diastolic)
-        diffs["spo2"] = hasDiff(summary.spo2Percentage, intervals.spO2)
-        diffs["glucose"] = hasDiff(summary.glucoseMmol, intervals.bloodGlucose, false)
-        diffs["vo2"] = hasDiff(summary.vo2Max, intervals.vo2max, false)
-        diffs["resp"] = hasDiff(summary.respiratoryRate, intervals.respiration, false)
-        diffs["sleepHR"] = hasDiff(summary.sleep?.avgHeartRate, intervals.avgSleepingHR)
-        
-        val intSleepMinutes = (intervals.sleepSecs ?: 0) / 60
-        diffs["sleep"] = hcSleepMinutes > 0 && hcSleepMinutes != intSleepMinutes
-
-        val anyDiff = diffs.values.any { it }
-        
-        (activity as? MainActivity)?.setSyncButtonEnabled(anyDiff)
+        (activity as? MainActivity)?.setSyncButtonEnabled(hasHCData)
     }
 
     private fun loadDayData(forceRefresh: Boolean) {
@@ -373,18 +395,14 @@ class DayFragment : Fragment() {
                 val database = AppDatabase.getDatabase(requireContext(), charArrayOf())
                 val dbHelper = DatabaseHelper(requireContext(), database, HealthConnectManager(requireContext()), ExtendedHealthConnectManager(requireContext()))
                 
-                if (forceRefresh) {
-                    dbHelper.loadDataForDate(date)
-                }
+                if (forceRefresh) dbHelper.loadDataForDate(date)
                 
                 val summary = dbHelper.getDailySummary(date)
                 currentSummary = summary
                 displaySummary(summary)
                 
-                // Update activity's sync timestamp text based on lastSyncedAt
                 updateActivitySyncTimestamp()
                 refreshSyncButtonStatus()
-                
                 progressBar.visibility = View.GONE
             } catch (e: Exception) {
                 Log.e("DayFragment", "Error loading data", e)
@@ -395,18 +413,20 @@ class DayFragment : Fragment() {
     }
 
     private fun updateActivitySyncTimestamp() {
-        // Only update if this fragment is currently visible to the user
         if (!isAdded || isDetached) return
         
-        val summary = currentSummary ?: return
+        val isIntervals = services.isNotEmpty() && selectedServiceIndex < services.size && services[selectedServiceIndex] == "Intervals.icu"
+        val isCW = services.isNotEmpty() && selectedServiceIndex < services.size && services[selectedServiceIndex] == "CoachWatts"
         
-        // Use lastSyncedAt (pushed data) instead of lastUpdated (fetched data)
-        val lastSynced = summary.intervalsWellness?.lastSyncedAt
+        val lastSynced = when {
+            isIntervals -> currentSummary?.intervalsWellness?.lastSyncedAt
+            isCW -> currentSummary?.coachWattsWellness?.lastSyncedAt
+            else -> null
+        }
         
         if (lastSynced != null) {
-            val dateTime = lastSynced.atZone(ZoneId.systemDefault()).toLocalDateTime()
             val formatter = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault())
-            (activity as? MainActivity)?.setLastSyncText("Last sync: ${dateTime.format(formatter)}")
+            (activity as? MainActivity)?.setLastSyncText("Last sync: ${lastSynced.atZone(ZoneId.systemDefault()).format(formatter)}")
         } else {
             (activity as? MainActivity)?.setLastSyncText("Last sync: Never")
         }
@@ -418,125 +438,154 @@ class DayFragment : Fragment() {
     }
 
     private fun displaySummary(summary: DailySummary) {
-        val intervals = summary.intervalsWellness
         val granted = summary.grantedPermissions
+        val intervals = summary.intervalsWellness
+        val cw = summary.coachWattsWellness
+        
+        val isIntervals = services.isNotEmpty() && selectedServiceIndex < services.size && services[selectedServiceIndex] == "Intervals.icu"
+        val isCW = services.isNotEmpty() && selectedServiceIndex < services.size && services[selectedServiceIndex] == "CoachWatts"
 
-        // Helper to check permission string
-        fun hasPerm(recordType: kotlin.reflect.KClass<out Record>): Boolean {
-            val permStr = HealthPermission.getReadPermission(recordType)
-            return granted.contains(permStr)
+        fun hasPerm(recordType: kotlin.reflect.KClass<out Record>): Boolean = granted.contains(HealthPermission.getReadPermission(recordType))
+        fun isVal(v: Any?): Boolean = v != null && v != 0 && v != 0.0
+
+        fun sStr(intVal: Any?, cwVal: Any?): String = when {
+            isIntervals -> intVal?.toString() ?: "--"
+            isCW -> cwVal?.toString() ?: "--"
+            else -> "--"
         }
-
-        // Helper to check if a value is meaningful
-        fun isVal(v: Any?): Boolean {
-            return v != null && v != 0 && v != 0.0
+        
+        fun sFloat(intVal: Double?, cwVal: Double?): String = when {
+            isIntervals -> intVal?.let { "%.1f".format(it) } ?: "--"
+            isCW -> cwVal?.let { "%.1f".format(it) } ?: "--"
+            else -> "--"
         }
 
         // Activity Card
-        rowSteps.visibility = if (hasPerm(StepsRecord::class) || isVal(intervals?.steps)) View.VISIBLE else View.GONE
-        rowCalories.visibility = if (hasPerm(ActiveCaloriesBurnedRecord::class) || isVal(intervals?.kcalConsumed)) View.VISIBLE else View.GONE
-        cardActivity.visibility = if (rowSteps.visibility == View.VISIBLE || rowCalories.visibility == View.VISIBLE) View.VISIBLE else View.GONE
-        
+        rowSteps.visibility = if (hasPerm(StepsRecord::class) || (isIntervals && isVal(intervals?.steps)) || (isCW && isVal(cw?.steps))) View.VISIBLE else View.GONE
         tvSteps.text = if (hasPerm(StepsRecord::class)) (summary.steps?.toString() ?: "--") else "n.a."
-        tvStepsIntervals.text = intervals?.steps?.toString() ?: "--"
+        tvStepsService.text = sStr(intervals?.steps, cw?.steps)
+
+        rowCalories.visibility = if (hasPerm(ActiveCaloriesBurnedRecord::class) || (isIntervals && isVal(intervals?.kcalConsumed)) || (isCW && isVal(cw?.calories))) View.VISIBLE else View.GONE
         tvCalories.text = if (hasPerm(ActiveCaloriesBurnedRecord::class)) (summary.caloriesBurned?.roundToInt()?.toString() ?: "--") else "n.a."
-        tvCaloriesIntervals.text = intervals?.kcalConsumed?.toString() ?: "--"
+        tvCaloriesService.text = sStr(intervals?.kcalConsumed, cw?.calories?.roundToInt())
+
+        cardActivity.visibility = if (rowSteps.visibility == View.VISIBLE || rowCalories.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
         // Vitals Card
-        rowSystolic.visibility = if (hasPerm(BloodPressureRecord::class) || isVal(intervals?.systolic)) View.VISIBLE else View.GONE
-        rowDiastolic.visibility = if (hasPerm(BloodPressureRecord::class) || isVal(intervals?.diastolic)) View.VISIBLE else View.GONE
-        rowSpO2.visibility = if (hasPerm(OxygenSaturationRecord::class) || isVal(intervals?.spO2)) View.VISIBLE else View.GONE
-        rowBloodGlucose.visibility = if (hasPerm(BloodGlucoseRecord::class) || isVal(intervals?.bloodGlucose)) View.VISIBLE else View.GONE
-        rowVO2Max.visibility = if (hasPerm(Vo2MaxRecord::class) || isVal(intervals?.vo2max)) View.VISIBLE else View.GONE
-        rowRespiratoryRate.visibility = if (hasPerm(RespiratoryRateRecord::class) || isVal(intervals?.respiration)) View.VISIBLE else View.GONE
-
-        val vitalsVisible = rowSystolic.visibility == View.VISIBLE || rowDiastolic.visibility == View.VISIBLE ||
-                          rowSpO2.visibility == View.VISIBLE || rowBloodGlucose.visibility == View.VISIBLE ||
-                          rowVO2Max.visibility == View.VISIBLE || rowRespiratoryRate.visibility == View.VISIBLE
-        cardVitals.visibility = if (vitalsVisible) View.VISIBLE else View.GONE
-
+        rowSystolic.visibility = if (hasPerm(BloodPressureRecord::class) || (isIntervals && isVal(intervals?.systolic)) || (isCW && isVal(cw?.systolic))) View.VISIBLE else View.GONE
         tvSystolic.text = if (hasPerm(BloodPressureRecord::class)) (summary.systolicBP?.toString() ?: "--") else "n.a."
-        tvSystolicIntervals.text = intervals?.systolic?.toString() ?: "--"
+        tvSystolicService.text = sStr(intervals?.systolic, cw?.systolic)
+
+        rowDiastolic.visibility = if (hasPerm(BloodPressureRecord::class) || (isIntervals && isVal(intervals?.diastolic)) || (isCW && isVal(cw?.diastolic))) View.VISIBLE else View.GONE
         tvDiastolic.text = if (hasPerm(BloodPressureRecord::class)) (summary.diastolicBP?.toString() ?: "--") else "n.a."
-        tvDiastolicIntervals.text = intervals?.diastolic?.toString() ?: "--"
+        tvDiastolicService.text = sStr(intervals?.diastolic, cw?.diastolic)
+
+        rowSpO2.visibility = if (hasPerm(OxygenSaturationRecord::class) || (isIntervals && isVal(intervals?.spO2)) || (isCW && isVal(cw?.spo2))) View.VISIBLE else View.GONE
         tvSpO2.text = if (hasPerm(OxygenSaturationRecord::class)) (summary.spo2Percentage?.roundToInt()?.toString() ?: "--") else "n.a."
-        tvSpO2Intervals.text = intervals?.spO2?.roundToInt()?.toString() ?: "--"
+        tvSpO2Service.text = when {
+            isIntervals -> intervals?.spO2?.roundToInt()?.toString() ?: "--"
+            isCW -> cw?.spo2?.roundToInt()?.toString() ?: "--"
+            else -> "--"
+        }
+
+        rowBloodGlucose.visibility = if (hasPerm(BloodGlucoseRecord::class) || (isIntervals && isVal(intervals?.bloodGlucose)) || (isCW && isVal(cw?.glucose))) View.VISIBLE else View.GONE
         tvBloodGlucose.text = if (hasPerm(BloodGlucoseRecord::class)) (summary.glucoseMmol?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvBloodGlucoseIntervals.text = intervals?.bloodGlucose?.let { "%.1f".format(it) } ?: "--"
+        tvBloodGlucoseService.text = sFloat(intervals?.bloodGlucose, cw?.glucose)
+
+        rowVO2Max.visibility = if (hasPerm(Vo2MaxRecord::class) || (isIntervals && isVal(intervals?.vo2max)) || (isCW && isVal(cw?.vo2max))) View.VISIBLE else View.GONE
         tvVO2Max.text = if (hasPerm(Vo2MaxRecord::class)) (summary.vo2Max?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvVO2MaxIntervals.text = intervals?.vo2max?.let { "%.1f".format(it) } ?: "--"
+        tvVO2MaxService.text = sFloat(intervals?.vo2max, cw?.vo2max)
+
+        rowRespiratoryRate.visibility = if (hasPerm(RespiratoryRateRecord::class) || (isIntervals && isVal(intervals?.respiration)) || (isCW && isVal(cw?.respiration))) View.VISIBLE else View.GONE
         tvRespiratoryRate.text = if (hasPerm(RespiratoryRateRecord::class)) (summary.respiratoryRate?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvRespiratoryRateIntervals.text = intervals?.respiration?.let { "%.1f".format(it) } ?: "--"
+        tvRespiratoryRateService.text = sFloat(intervals?.respiration, cw?.respiration)
+
+        cardVitals.visibility = if (rowSystolic.visibility == View.VISIBLE || rowDiastolic.visibility == View.VISIBLE ||
+                          rowSpO2.visibility == View.VISIBLE || rowBloodGlucose.visibility == View.VISIBLE ||
+                          rowVO2Max.visibility == View.VISIBLE || rowRespiratoryRate.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
         // Heart Card
-        rowRestingHR.visibility = if (hasPerm(RestingHeartRateRecord::class) || isVal(intervals?.restingHR)) View.VISIBLE else View.GONE
-        rowSleepHR.visibility = if (hasPerm(HeartRateRecord::class) || isVal(intervals?.avgSleepingHR)) View.VISIBLE else View.GONE
-        rowHRV.visibility = if (hasPerm(HeartRateVariabilityRmssdRecord::class) || isVal(intervals?.hrv)) View.VISIBLE else View.GONE
+        rowRestingHR.visibility = if (hasPerm(RestingHeartRateRecord::class) || (isIntervals && isVal(intervals?.restingHR)) || (isCW && isVal(cw?.resting_hr))) View.VISIBLE else View.GONE
+        tvRestingHR.text = if (hasPerm(RestingHeartRateRecord::class)) (summary.restingHR?.toString() ?: "--") else "n.a."
+        tvRestingHRService.text = sStr(intervals?.restingHR, cw?.resting_hr)
+
+        rowSleepHR.visibility = if (hasPerm(HeartRateRecord::class) || (isIntervals && isVal(intervals?.avgSleepingHR)) || (isCW && isVal(cw?.avg_sleeping_hr))) View.VISIBLE else View.GONE
+        tvSleepHR.text = if (hasPerm(HeartRateRecord::class)) (summary.sleep?.avgHeartRate?.toString() ?: "--") else "n.a."
+        tvSleepHRService.text = when {
+            isIntervals -> intervals?.avgSleepingHR?.roundToInt()?.toString() ?: "--"
+            isCW -> cw?.avg_sleeping_hr?.roundToInt()?.toString() ?: "--"
+            else -> "--"
+        }
+
+        rowHRV.visibility = if (hasPerm(HeartRateVariabilityRmssdRecord::class) || (isIntervals && isVal(intervals?.hrv)) || (isCW && isVal(cw?.hrv))) View.VISIBLE else View.GONE
+        tvHRV.text = if (hasPerm(HeartRateVariabilityRmssdRecord::class)) (summary.hrvMs?.roundToInt()?.toString() ?: "--") else "n.a."
+        tvHRVService.text = sStr(intervals?.hrv?.roundToInt(), cw?.hrv?.roundToInt())
+
         cardHeart.visibility = if (rowRestingHR.visibility == View.VISIBLE || rowSleepHR.visibility == View.VISIBLE || rowHRV.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
-        tvRestingHR.text = if (hasPerm(RestingHeartRateRecord::class)) (summary.restingHR?.toString() ?: "--") else "n.a."
-        tvRestingHRIntervals.text = intervals?.restingHR?.toString() ?: "--"
-        tvSleepHR.text = if (hasPerm(HeartRateRecord::class)) (summary.sleep?.avgHeartRate?.toString() ?: "--") else "n.a."
-        tvSleepHRIntervals.text = intervals?.avgSleepingHR?.toInt()?.toString() ?: "--"
-        tvHRV.text = if (hasPerm(HeartRateVariabilityRmssdRecord::class)) (summary.hrvMs?.roundToInt()?.toString() ?: "--") else "n.a."
-        tvHRVIntervals.text = intervals?.hrv?.roundToInt()?.toString() ?: "--"
-
         // Body Card
-        rowWeight.visibility = if (hasPerm(WeightRecord::class) || isVal(intervals?.weight)) View.VISIBLE else View.GONE
-        rowBodyFat.visibility = if (hasPerm(BodyFatRecord::class) || isVal(intervals?.bodyFat)) View.VISIBLE else View.GONE
-        rowLeanBodyMass.visibility = if (hasPerm(LeanBodyMassRecord::class) || isVal(intervals?.leanMass)) View.VISIBLE else View.GONE
-        rowBoneMass.visibility = if (hasPerm(BoneMassRecord::class) || isVal(intervals?.boneMass)) View.VISIBLE else View.GONE
-        cardBody.visibility = if (rowWeight.visibility == View.VISIBLE || rowBodyFat.visibility == View.VISIBLE || 
-                                 rowLeanBodyMass.visibility == View.VISIBLE || rowBoneMass.visibility == View.VISIBLE) View.VISIBLE else View.GONE
-
+        rowWeight.visibility = if (hasPerm(WeightRecord::class) || (isIntervals && isVal(intervals?.weight)) || (isCW && isVal(cw?.weight))) View.VISIBLE else View.GONE
         tvWeight.text = if (hasPerm(WeightRecord::class)) (summary.weightKg?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvWeightIntervals.text = intervals?.weight?.let { "%.1f".format(it) } ?: "--"
+        tvWeightService.text = sFloat(intervals?.weight, cw?.weight)
+
+        rowBodyFat.visibility = if (hasPerm(BodyFatRecord::class) || (isIntervals && isVal(intervals?.bodyFat)) || (isCW && isVal(cw?.body_fat))) View.VISIBLE else View.GONE
         tvBodyFat.text = if (hasPerm(BodyFatRecord::class)) (summary.bodyFatPercentage?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvBodyFatIntervals.text = intervals?.bodyFat?.let { "%.1f".format(it) } ?: "--"
-        tvLeanBodyMass.text = if (hasPerm(LeanBodyMassRecord::class)) (summary.leanBodyMassKg?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvLeanBodyMassIntervals.text = intervals?.leanMass?.let { "%.1f".format(it) } ?: "--"
-        tvBoneMass.text = if (hasPerm(BoneMassRecord::class)) (summary.boneMassKg?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvBoneMassIntervals.text = intervals?.boneMass?.let { "%.1f".format(it) } ?: "--"
+        tvBodyFatService.text = sFloat(intervals?.bodyFat, cw?.body_fat)
+
+        rowLeanMass.visibility = if (hasPerm(LeanBodyMassRecord::class) || (isCW && isVal(cw?.lean_mass))) View.VISIBLE else View.GONE
+        tvLeanMass.text = if (hasPerm(LeanBodyMassRecord::class)) (summary.leanBodyMassKg?.let { "%.1f".format(it) } ?: "--") else "n.a."
+        tvLeanMassService.text = if (isCW) (cw?.lean_mass?.let { "%.1f".format(it) } ?: "--") else "--"
+
+        cardBody.visibility = if (rowWeight.visibility == View.VISIBLE || rowBodyFat.visibility == View.VISIBLE || rowLeanMass.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
         // Sleep Card
-        val sleepHasData = summary.sleep != null || (intervals?.sleepSecs ?: 0) > 0
-        cardSleep.visibility = if (hasPerm(SleepSessionRecord::class) || sleepHasData) View.VISIBLE else View.GONE
+        val sleep = summary.sleep
+        val hasSleep = sleep != null && hasPerm(SleepSessionRecord::class)
         
-        summary.sleep?.let { sleep ->
-            tvSleepDuration.text = formatMinutes(sleep.durationMinutes)
-            tvSleepDurationIntervals.text = "n.a."
+        rowSleepDuration.visibility = if (hasSleep || (isIntervals && isVal(intervals?.sleepSecs)) || (isCW && isVal(cw?.sleep_seconds))) View.VISIBLE else View.GONE
+        tvSleepDuration.text = if (hasSleep) formatMinutes(sleep?.durationMinutes) else "n.a."
+        tvSleepDurationService.text = "--" // Intervals/CoachWatts provide Asleep time
+        
+        rowSleepAsleep.visibility = if (hasSleep || (isIntervals && isVal(intervals?.sleepSecs)) || (isCW && isVal(cw?.sleep_seconds))) View.VISIBLE else View.GONE
+        tvSleepAsleep.text = if (hasSleep) formatMinutes(sleep?.asleepDurationMinutes) else "n.a."
+        tvSleepAsleepService.text = when {
+            isIntervals -> formatMinutes(intervals?.sleepSecs?.toLong()?.div(60))
+            isCW -> formatMinutes(cw?.sleep_seconds?.toLong()?.div(60))
+            else -> "--"
+        }
+
+        if (hasSleep && sleep != null) {
+            val total = sleep.durationMinutes.toDouble().coerceAtLeast(1.0)
             
-            tvSleepAsleep.text = formatMinutes(sleep.asleepDurationMinutes)
-            tvSleepAsleepIntervals.text = intervals?.sleepSecs?.let { formatMinutes((it / 60).toLong()) } ?: "--"
-            
-            val total = sleep.durationMinutes.toDouble()
-            if (total > 0) {
-                tvSleepAwakeDetail.text = formatMinutes(sleep.awakeSleepMinutes)
-                tvSleepAwakePercent.text = "${((sleep.awakeSleepMinutes ?: 0) * 100 / total).roundToInt()}%"
-                
-                tvSleepREMDetail.text = formatMinutes(sleep.remSleepMinutes)
-                tvSleepREMPercent.text = "${((sleep.remSleepMinutes ?: 0) * 100 / total).roundToInt()}%"
-                
-                tvSleepLightDetail.text = formatMinutes(sleep.lightSleepMinutes)
-                tvSleepLightPercent.text = "${((sleep.lightSleepMinutes ?: 0) * 100 / total).roundToInt()}%"
-                
-                tvSleepDeepDetail.text = formatMinutes(sleep.deepSleepMinutes)
-                tvSleepDeepPercent.text = "${((sleep.deepSleepMinutes ?: 0) * 100 / total).roundToInt()}%"
-                
-                sleepChartView.setData(sleep.stageIntervals, sleep.startTime.toEpochMilli(), sleep.endTime.toEpochMilli())
+            fun setStage(row: View, tv: TextView, tvPct: TextView, mins: Long?) {
+                if (mins != null && mins > 0) {
+                    row.visibility = View.VISIBLE
+                    tv.text = formatMinutes(mins)
+                    tvPct.text = "${((mins / total) * 100).roundToInt()}%"
+                } else {
+                    row.visibility = View.GONE
+                }
             }
-        }
-    }
 
-    companion object {
-        private const val ARG_DATE = "date"
+            setStage(rowAwakeSleep, tvAwakeSleep, tvAwakeSleepPercent, sleep.awakeSleepMinutes)
+            setStage(rowRemSleep, tvRemSleep, tvRemSleepPercent, sleep.remSleepMinutes)
+            setStage(rowLightSleep, tvLightSleep, tvLightSleepPercent, sleep.lightSleepMinutes)
+            setStage(rowDeepSleep, tvDeepSleep, tvDeepSleepPercent, sleep.deepSleepMinutes)
 
-        fun newInstance(date: LocalDate): DayFragment {
-            val fragment = DayFragment()
-            val args = Bundle()
-            args.putString(ARG_DATE, date.toString())
-            fragment.arguments = args
-            return fragment
+            if (!sleep.stageIntervals.isNullOrEmpty()) {
+                sleepChartView.visibility = View.VISIBLE
+                sleepChartView.setData(sleep.stageIntervals, sleep.startTime.toEpochMilli(), sleep.endTime.toEpochMilli())
+            } else {
+                sleepChartView.visibility = View.GONE
+            }
+        } else {
+            rowAwakeSleep.visibility = View.GONE
+            rowRemSleep.visibility = View.GONE
+            rowLightSleep.visibility = View.GONE
+            rowDeepSleep.visibility = View.GONE
+            sleepChartView.visibility = View.GONE
         }
+
+        cardSleep.visibility = if (rowSleepDuration.visibility == View.VISIBLE) View.VISIBLE else View.GONE
     }
 }

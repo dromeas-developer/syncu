@@ -24,6 +24,15 @@
                 android:layout_gravity="center"
                 android:visibility="gone" />
 
+            <!-- Service Tabs -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabLayoutServices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:tabMode="fixed"
+                app:tabGravity="fill" />
+
             <!-- Activity Metrics Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardActivity"
@@ -55,7 +64,7 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Intervals" android:scaleType="centerInside" />
+                            <ImageView android:id="@+id/ivServiceIcon" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSteps" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
@@ -98,7 +107,7 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Intervals" android:scaleType="centerInside" />
+                            <ImageView android:id="@+id/ivServiceIconVitals" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSystolic" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
@@ -165,7 +174,7 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Intervals" android:scaleType="centerInside" />
+                            <ImageView android:id="@+id/ivServiceIconHeart" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowRestingHR" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
@@ -214,7 +223,7 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Intervals" android:scaleType="centerInside" />
+                            <ImageView android:id="@+id/ivServiceIconBody" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowWeight" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
@@ -271,16 +280,16 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Intervals" android:scaleType="centerInside" />
+                            <ImageView android:id="@+id/ivServiceIconSleep" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
                         </LinearLayout>
 
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
+                        <LinearLayout android:id="@+id/rowSleepDuration" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Time in Bed" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSleepDuration" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
                             <TextView android:id="@+id/tvSleepDurationIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
                         </LinearLayout>
 
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
+                        <LinearLayout android:id="@+id/rowSleepAsleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Asleep" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSleepAsleep" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
                             <TextView android:id="@+id/tvSleepAsleepIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
@@ -304,7 +313,7 @@
                             android:orientation="vertical" android:paddingTop="8dp">
 
                             <!-- Awake Row -->
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
+                            <LinearLayout android:id="@+id/rowSleepAwakeDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#FFFFFF" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Awake" android:textColor="#8E8E93" />
                                 <TextView android:id="@+id/tvSleepAwakeDetail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--h --m" android:textStyle="bold" android:layout_marginEnd="8dp"/>
@@ -312,7 +321,7 @@
                             </LinearLayout>
 
                             <!-- REM Row -->
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
+                            <LinearLayout android:id="@+id/rowSleepREMDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#4FC3F7" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="REM" android:textColor="#8E8E93" />
                                 <TextView android:id="@+id/tvSleepREMDetail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--h --m" android:textStyle="bold" android:layout_marginEnd="8dp"/>
@@ -320,7 +329,7 @@
                             </LinearLayout>
 
                             <!-- Light Row -->
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
+                            <LinearLayout android:id="@+id/rowSleepLightDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#1E88E5" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Light" android:textColor="#8E8E93" />
                                 <TextView android:id="@+id/tvSleepLightDetail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--h --m" android:textStyle="bold" android:layout_marginEnd="8dp"/>
@@ -328,7 +337,7 @@
                             </LinearLayout>
 
                             <!-- Deep Row -->
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
+                            <LinearLayout android:id="@+id/rowSleepDeepDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#154391" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Deep" android:textColor="#8E8E93" />
                                 <TextView android:id="@+id/tvSleepDeepDetail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--h --m" android:textStyle="bold" android:layout_marginEnd="8dp"/>

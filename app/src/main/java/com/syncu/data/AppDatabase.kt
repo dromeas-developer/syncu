@@ -16,11 +16,11 @@ import java.time.Instant
 import java.time.LocalDate
 
 /**
- * Room Database - Version 8: Removed distanceMeters and avgHR from daily_wellness_records
+ * Room Database - Version 11: Added avgSleepingHR to coachwatts_wellness_records
  */
 @Database(
-    entities = [Activity::class, SleepSession::class, DailyWellnessRecord::class, IntervalsWellnessRecord::class],
-    version = 8,
+    entities = [Activity::class, SleepSession::class, DailyWellnessRecord::class, IntervalsWellnessRecord::class, CoachWattsWellnessRecord::class],
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sleepDao(): SleepDao
     abstract fun wellnessDao(): DailyWellnessDao
     abstract fun intervalsDao(): IntervalsWellnessDao
+    abstract fun coachWattsDao(): CoachWattsWellnessDao
 
     companion object {
         @Volatile
@@ -127,6 +128,50 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 8 to 9: Add coachwatts_wellness_records
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS coachwatts_wellness_records (
+                        date TEXT PRIMARY KEY NOT NULL,
+                        weight REAL,
+                        restingHR INTEGER,
+                        hrv REAL,
+                        sleepMinutes INTEGER,
+                        spO2 REAL,
+                        systolic INTEGER,
+                        diastolic INTEGER,
+                        glucose REAL,
+                        bodyFat REAL,
+                        leanMass REAL,
+                        boneMass REAL,
+                        vo2max REAL,
+                        steps INTEGER,
+                        respiration REAL,
+                        calories REAL,
+                        carbs REAL,
+                        protein REAL,
+                        fat REAL,
+                        lastUpdated INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // Migration from version 9 to 10: Add lastSyncedAt to coachwatts_wellness_records
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE coachwatts_wellness_records ADD COLUMN lastSyncedAt INTEGER")
+            }
+        }
+
+        // Migration from version 10 to 11: Add avgSleepingHR to coachwatts_wellness_records
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE coachwatts_wellness_records ADD COLUMN avgSleepingHR REAL")
+            }
+        }
+
         fun getDatabase(context: Context, passphrase: CharArray): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -134,7 +179,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "syncu_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, 
+                        MIGRATION_5_6, MIGRATION_6_7, MIGRATION_8_9, MIGRATION_9_10, 
+                        MIGRATION_10_11
+                    )
                     .fallbackToDestructiveMigration()
                     .build()
                 
@@ -204,6 +253,21 @@ interface IntervalsWellnessDao {
     suspend fun deleteWellnessBefore(cutoffDate: LocalDate)
     
     @Query("UPDATE intervals_wellness_records SET lastSyncedAt = :timestamp WHERE date = :date")
+    suspend fun updateLastSyncedAt(date: LocalDate, timestamp: Instant)
+}
+
+@Dao
+interface CoachWattsWellnessDao {
+    @Query("SELECT * FROM coachwatts_wellness_records WHERE date = :date")
+    suspend fun getWellnessForDate(date: LocalDate): CoachWattsWellnessRecord?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWellness(record: CoachWattsWellnessRecord)
+
+    @Query("DELETE FROM coachwatts_wellness_records WHERE date < :cutoffDate")
+    suspend fun deleteWellnessBefore(cutoffDate: LocalDate)
+
+    @Query("UPDATE coachwatts_wellness_records SET lastSyncedAt = :timestamp WHERE date = :date")
     suspend fun updateLastSyncedAt(date: LocalDate, timestamp: Instant)
 }
 

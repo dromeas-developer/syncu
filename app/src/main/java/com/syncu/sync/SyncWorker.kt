@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.work.*
 import com.syncu.api.HealthConnectManager
 import com.syncu.api.IntervalsWellnessApiClient
+import com.syncu.api.CoachWattsApiClient
 import com.syncu.data.AppDatabase
 import com.syncu.data.DatabaseHelper
 import com.syncu.utils.PreferencesManager
@@ -22,7 +23,7 @@ import kotlinx.coroutines.CancellationException
 
 /**
  * Background sync worker
- * Syncs wellness data to intervals.icu at scheduled times
+ * Syncs wellness data to configured services at scheduled times
  */
 class SyncWorker(
     context: Context,
@@ -36,20 +37,10 @@ class SyncWorker(
         try {
             Log.i("SyncWorker", "Background sync task started")
             
-            // 1. Schedule NEXT run. 
-            // We use APPEND_OR_REPLACE so that this running instance isn't cancelled,
-            // but the next occurrence is queued up to run after this one completes.
             scheduleNext(applicationContext, ExistingWorkPolicy.APPEND_OR_REPLACE)
 
             val credentialsManager = SecureCredentialsManager(applicationContext)
-            val apiKey = credentialsManager.getApiKey()
-            val athleteId = credentialsManager.getAthleteId()
-
-            if (apiKey == null || athleteId == null) {
-                Log.w("SyncWorker", "Credentials missing")
-                return@withContext Result.failure()
-            }
-
+            
             val healthManager = HealthConnectManager(applicationContext)
             val extendedHealthManager = ExtendedHealthConnectManager(applicationContext)
             
@@ -66,34 +57,37 @@ class SyncWorker(
                 extendedHealthManager
             )
 
-            val intervalsClient = IntervalsWellnessApiClient(apiKey, athleteId)
-
             // Sync Yesterday and Today
             val today = LocalDate.now()
             val yesterday = today.minusDays(1)
-
             val daysToSync = listOf(yesterday, today)
-            
-            for (date in daysToSync) {
-                Log.i("SyncWorker", "Processing sync for $date")
-                // Load latest data from Health Connect and existing Intervals data
-                dbHelper.loadDataForDate(date)
-                val summary = dbHelper.getDailySummary(date)
-                
-                // Upload to Intervals.icu
-                val result = intervalsClient.uploadWellnessData(summary)
 
-                if (result.isSuccess) {
-                    Log.i("SyncWorker", "Successfully synced $date to Intervals.icu")
-                    
-                    // Mark as synced in local DB with current timestamp
-                    database.intervalsDao().updateLastSyncedAt(date, Instant.now())
-                    
-                    // IMPORTANT: Refresh Intervals cache AFTER successful upload 
-                    // so the local database reflects the changes just sent to the server.
-                    dbHelper.refreshIntervalsCache(date)
-                } else {
-                    Log.e("SyncWorker", "Failed to sync $date: ${result.exceptionOrNull()?.message}")
+            // 1. Sync to Intervals.icu if configured
+            if (credentialsManager.hasIntervalsCredentials()) {
+                val intervalsClient = IntervalsWellnessApiClient(
+                    credentialsManager.getApiKey()!!, 
+                    credentialsManager.getAthleteId()!!
+                )
+                
+                for (date in daysToSync) {
+                    dbHelper.loadDataForDate(date)
+                    val summary = dbHelper.getDailySummary(date)
+                    val result = intervalsClient.uploadWellnessData(summary)
+                    if (result.isSuccess) {
+                        database.intervalsDao().updateLastSyncedAt(date, Instant.now())
+                        dbHelper.refreshIntervalsCache(date)
+                    }
+                }
+            }
+
+            // 2. Sync to CoachWatts if configured
+            if (credentialsManager.hasCoachWattsCredentials()) {
+                val coachWattsClient = CoachWattsApiClient(credentialsManager.getCoachWattsToken()!!)
+                
+                for (date in daysToSync) {
+                    dbHelper.loadDataForDate(date)
+                    val summary = dbHelper.getDailySummary(date)
+                    coachWattsClient.uploadWellnessData(summary)
                 }
             }
 
@@ -111,12 +105,6 @@ class SyncWorker(
     companion object {
         private const val WORK_NAME = "syncu_scheduled_sync"
 
-        /**
-         * Calculates the delay to the next scheduled sync time and enqueues the work.
-         * 
-         * @param policy The policy to use if work already exists. 
-         *               Defaults to KEEP to avoid unnecessary rescheduling.
-         */
         fun scheduleNext(context: Context, policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP) {
             val prefManager = PreferencesManager(context)
             if (!prefManager.autoSyncEnabled) {
@@ -126,7 +114,6 @@ class SyncWorker(
 
             val now = LocalDateTime.now()
             
-            // Calculate next occurrence of Time 1
             val time1 = parseTime(prefManager.syncTime1) ?: LocalTime.of(8, 0)
             var nextOccurrence1 = now.with(time1).withSecond(0).withNano(0)
             if (!nextOccurrence1.isAfter(now)) {
@@ -135,7 +122,6 @@ class SyncWorker(
 
             var nextRunAt = nextOccurrence1
 
-            // If Time 2 is enabled, check if it's sooner
             if (prefManager.syncTime2Enabled) {
                 val time2 = parseTime(prefManager.syncTime2) ?: LocalTime.of(1, 0)
                 var nextOccurrence2 = now.with(time2).withSecond(0).withNano(0)
@@ -148,18 +134,12 @@ class SyncWorker(
                 }
             }
 
-            // Safety: If the next run is within 5 seconds, it's likely we are just finishing or 
-            // right at the edge of the window. Push it to the next cycle to prevent tight loops.
             val delayMillis = Duration.between(now, nextRunAt).toMillis()
             if (delayMillis < 5000) {
-                Log.i("SyncWorker", "Next window too close (${delayMillis}ms). Pushing to next occurrence.")
                 nextRunAt = nextRunAt.plusDays(1)
             }
 
-            // Re-calculate delay in seconds for WorkManager. 
-            // getSeconds() is API 26 compatible (minSdk).
             val finalDelaySeconds = Duration.between(now, nextRunAt).seconds
-            Log.i("SyncWorker", "Next sync scheduled for $now (in ${finalDelaySeconds/60} minutes) with policy $policy")
 
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)

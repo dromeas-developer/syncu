@@ -143,36 +143,33 @@ class IntervalsWellnessApiClient(
  * Extension function to convert DailySummary to Intervals.icu format
  * Sanitizes data by replacing 0 with null for fields where 0 is invalid/unlikely
  */
-fun DailySummary.toIntervalsWellness(): IntervalsWellnessData {
+fun DailySummary.toIntervalsWellness(): Map<String, Any?> {
     val formatter = DateTimeFormatter.ISO_DATE
-    // Use asleepDurationMinutes if available, otherwise fallback to durationMinutes
     val effectiveSleepMinutes = this.sleep?.asleepDurationMinutes ?: this.sleep?.durationMinutes
     
-    // Helper to treat 0 as null for integer fields (Interals.icu 422 error prevention)
     fun Int?.nullIfZero(): Int? = if (this == 0) null else this
-    // Helper to treat 0 as null for double fields
     fun Double?.nullIfZero(): Double? = if (this == null || this == 0.0) null else this
 
-    return IntervalsWellnessData(
-        id = this.date.format(formatter),
-        restingHR = this.restingHR.nullIfZero(),
-        hrv = this.hrvMs.nullIfZero(),
-        weight = this.weightKg.nullIfZero(),
-        bodyFat = this.bodyFatPercentage.nullIfZero(),
-        leanMass = this.leanBodyMassKg.nullIfZero(),
-        boneMass = this.boneMassKg.nullIfZero(),
-        vo2max = this.vo2Max.nullIfZero(),
-        sleepSecs = effectiveSleepMinutes?.toInt()?.times(60).nullIfZero(),
-        avgSleepingHR = this.sleep?.avgHeartRate?.nullIfZero()?.toDouble(),
-        spO2 = this.spo2Percentage.nullIfZero(),
-        systolic = this.systolicBP.nullIfZero(),
-        diastolic = this.diastolicBP.nullIfZero(),
-        bloodGlucose = this.glucoseMmol.nullIfZero(),
-        respiration = this.respiratoryRate.nullIfZero(),
-        kcalConsumed = this.caloriesBurned?.toInt().nullIfZero(),
-        steps = this.steps.nullIfZero(),
-        carbohydrates = this.carbsGrams.nullIfZero(),
-        protein = this.proteinGrams.nullIfZero(),
-        fatTotal = this.fatGrams.nullIfZero()
-    )
+    // We build a map instead of a data class to have full control over keys
+    // and exclude fields like boneMass and leanMass that are causing 422 errors.
+    return mapOf(
+        "id" to this.date.format(formatter),
+        "restingHR" to this.restingHR.nullIfZero(),
+        "hrv" to this.hrvMs.nullIfZero(),
+        "weight" to this.weightKg.nullIfZero(),
+        "bodyFat" to this.bodyFatPercentage.nullIfZero(),
+        "vo2max" to this.vo2Max.nullIfZero(),
+        "sleepSecs" to effectiveSleepMinutes?.toInt()?.times(60).nullIfZero(),
+        "avgSleepingHR" to this.sleep?.avgHeartRate?.nullIfZero()?.toDouble(),
+        "spO2" to this.spo2Percentage.nullIfZero(),
+        "systolic" to this.systolicBP.nullIfZero(),
+        "diastolic" to this.diastolicBP.nullIfZero(),
+        "bloodGlucose" to this.glucoseMmol.nullIfZero(),
+        "respiration" to this.respiratoryRate.nullIfZero(),
+        "kcalConsumed" to this.caloriesBurned?.toInt().nullIfZero(),
+        "steps" to this.steps.nullIfZero(),
+        "carbohydrates" to this.carbsGrams.nullIfZero(),
+        "protein" to this.proteinGrams.nullIfZero(),
+        "fatTotal" to this.fatGrams.nullIfZero()
+    ).filterValues { it != null }
 }
