@@ -99,9 +99,6 @@ class DayFragment : Fragment() {
     private lateinit var rowBodyFat: View
     private lateinit var tvBodyFat: TextView
     private lateinit var tvBodyFatService: TextView
-    private lateinit var rowLeanMass: View
-    private lateinit var tvLeanMass: TextView
-    private lateinit var tvLeanMassService: TextView
 
     // Sleep Rows
     private lateinit var rowSleepDuration: View
@@ -233,10 +230,6 @@ class DayFragment : Fragment() {
         rowBodyFat = view.findViewById(R.id.rowBodyFat)
         tvBodyFat = view.findViewById(R.id.tvBodyFat)
         tvBodyFatService = view.findViewById(R.id.tvBodyFatIntervals)
-
-        rowLeanMass = view.findViewById(R.id.rowLeanBodyMass)
-        tvLeanMass = view.findViewById(R.id.tvLeanBodyMass)
-        tvLeanMassService = view.findViewById(R.id.tvLeanBodyMassIntervals)
 
         rowSleepDuration = view.findViewById(R.id.rowSleepDuration)
         tvSleepDuration = view.findViewById(R.id.tvSleepDuration)
@@ -532,11 +525,7 @@ class DayFragment : Fragment() {
         tvBodyFat.text = if (hasPerm(BodyFatRecord::class)) (summary.bodyFatPercentage?.let { "%.1f".format(it) } ?: "--") else "n.a."
         tvBodyFatService.text = sFloat(intervals?.bodyFat, cw?.body_fat)
 
-        rowLeanMass.visibility = if (hasPerm(LeanBodyMassRecord::class) || (isCW && isVal(cw?.lean_mass))) View.VISIBLE else View.GONE
-        tvLeanMass.text = if (hasPerm(LeanBodyMassRecord::class)) (summary.leanBodyMassKg?.let { "%.1f".format(it) } ?: "--") else "n.a."
-        tvLeanMassService.text = if (isCW) (cw?.lean_mass?.let { "%.1f".format(it) } ?: "--") else "--"
-
-        cardBody.visibility = if (rowWeight.visibility == View.VISIBLE || rowBodyFat.visibility == View.VISIBLE || rowLeanMass.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+        cardBody.visibility = if (rowWeight.visibility == View.VISIBLE || rowBodyFat.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
         // Sleep Card
         val sleep = summary.sleep

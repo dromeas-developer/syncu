@@ -105,8 +105,6 @@ class DatabaseHelper(
             hrvMs = wellness?.hrvMs,
             weightKg = wellness?.weightKg,
             bodyFatPercentage = wellness?.bodyFatPercentage,
-            leanBodyMassKg = wellness?.leanBodyMassKg,
-            boneMassKg = wellness?.boneMassKg,
             spo2Percentage = wellness?.spo2Percentage,
             glucoseMmol = wellness?.glucoseMmol,
             systolicBP = wellness?.systolicBP,
@@ -187,12 +185,11 @@ class DatabaseHelper(
                             diastolic = data.diastolic,
                             glucose = data.glucose,
                             bodyFat = data.body_fat,
-                            leanMass = data.lean_mass,
-                            boneMass = data.bone_mass,
                             vo2max = data.vo2max,
                             steps = data.steps,
                             respiration = data.respiration,
                             calories = data.calories,
+                            totalCalories = data.total_calories,
                             carbs = data.carbs,
                             protein = data.protein,
                             fat = data.fat,
@@ -250,8 +247,6 @@ class DatabaseHelper(
                 hrvMs = if (has(androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord::class)) it.hrvMs else null,
                 weightKg = if (has(androidx.health.connect.client.records.WeightRecord::class)) it.weightKg else null,
                 bodyFatPercentage = if (has(androidx.health.connect.client.records.BodyFatRecord::class)) it.bodyFatPercentage else null,
-                leanBodyMassKg = if (has(androidx.health.connect.client.records.LeanBodyMassRecord::class)) it.leanBodyMassKg else null,
-                boneMassKg = if (has(androidx.health.connect.client.records.BoneMassRecord::class)) it.boneMassKg else null,
                 spo2Percentage = if (has(androidx.health.connect.client.records.OxygenSaturationRecord::class)) it.spo2Percentage else null,
                 glucoseMmol = if (has(androidx.health.connect.client.records.BloodGlucoseRecord::class)) it.glucoseMmol else null,
                 systolicBP = if (has(androidx.health.connect.client.records.BloodPressureRecord::class)) it.systolicBP else null,
@@ -268,27 +263,29 @@ class DatabaseHelper(
                 (intervalsRecord.lastUpdated != null && ChronoUnit.HOURS.between(intervalsRecord.lastUpdated, Instant.now()) > 24)
         
         val intervalsData = if (shouldRefreshIntervals) refreshIntervalsCache(date) else {
-            IntervalsWellnessData(
-                id = date.toString(),
-                weight = intervalsRecord.weight,
-                restingHR = intervalsRecord.restingHR,
-                hrv = intervalsRecord.hrv,
-                kcalConsumed = intervalsRecord.kcalConsumed,
-                sleepSecs = intervalsRecord.sleepSecs,
-                avgSleepingHR = intervalsRecord.avgSleepingHR,
-                spO2 = intervalsRecord.spO2,
-                systolic = intervalsRecord.systolic,
-                diastolic = intervalsRecord.diastolic,
-                bloodGlucose = intervalsRecord.bloodGlucose,
-                bodyFat = intervalsRecord.bodyFat,
-                vo2max = intervalsRecord.vo2max,
-                steps = intervalsRecord.steps,
-                respiration = intervalsRecord.respiration,
-                carbohydrates = intervalsRecord.carbohydrates,
-                protein = intervalsRecord.protein,
-                fatTotal = intervalsRecord.fatTotal,
-                lastSyncedAt = intervalsRecord.lastSyncedAt
-            )
+            intervalsRecord?.let {
+                IntervalsWellnessData(
+                    id = date.toString(),
+                    weight = it.weight,
+                    restingHR = it.restingHR,
+                    hrv = it.hrv,
+                    kcalConsumed = it.kcalConsumed,
+                    sleepSecs = it.sleepSecs,
+                    avgSleepingHR = it.avgSleepingHR,
+                    spO2 = it.spO2,
+                    systolic = it.systolic,
+                    diastolic = it.diastolic,
+                    bloodGlucose = it.bloodGlucose,
+                    bodyFat = it.bodyFat,
+                    vo2max = it.vo2max,
+                    steps = it.steps,
+                    respiration = it.respiration,
+                    carbohydrates = it.carbohydrates,
+                    protein = it.protein,
+                    fatTotal = it.fatTotal,
+                    lastSyncedAt = it.lastSyncedAt
+                )
+            }
         }
 
         // CoachWatts cache
@@ -310,12 +307,11 @@ class DatabaseHelper(
                 diastolic = it.diastolic,
                 glucose = it.glucose,
                 body_fat = it.bodyFat,
-                lean_mass = it.leanMass,
-                bone_mass = it.boneMass,
                 vo2max = it.vo2max,
                 steps = it.steps,
                 respiration = it.respiration,
                 calories = it.calories,
+                total_calories = it.totalCalories,
                 avg_sleeping_hr = it.avgSleepingHR,
                 carbs = it.carbs,
                 protein = it.protein,
@@ -334,12 +330,11 @@ class DatabaseHelper(
                 diastolic = it.diastolic,
                 glucose = it.glucose,
                 body_fat = it.bodyFat,
-                lean_mass = it.leanMass,
-                bone_mass = it.boneMass,
                 vo2max = it.vo2max,
                 steps = it.steps,
                 respiration = it.respiration,
                 calories = it.calories,
+                total_calories = it.totalCalories,
                 avg_sleeping_hr = it.avgSleepingHR,
                 carbs = it.carbs,
                 protein = it.protein,
@@ -369,8 +364,6 @@ class DatabaseHelper(
             hrvMs = wellnessRecord?.hrvMs,
             weightKg = wellnessRecord?.weightKg,
             bodyFatPercentage = wellnessRecord?.bodyFatPercentage,
-            leanBodyMassKg = wellnessRecord?.leanBodyMassKg,
-            boneMassKg = wellnessRecord?.boneMassKg,
             spo2Percentage = wellnessRecord?.spo2Percentage,
             glucoseMmol = wellnessRecord?.glucoseMmol,
             systolicBP = wellnessRecord?.systolicBP,
@@ -401,8 +394,6 @@ class DatabaseHelper(
         if (record == null) return null
         val parts = mutableListOf<String>()
         record.bodyFatPercentage?.let { parts.add("Fat: ${"%.1f".format(it)}%") }
-        record.leanBodyMassKg?.let { parts.add("Lean: ${"%.1f".format(it)}kg") }
-        record.boneMassKg?.let { parts.add("Bone: ${"%.1f".format(it)}kg") }
         return if (parts.isNotEmpty()) "Health Connect: ${parts.joinToString(", ")}" else null
     }
 

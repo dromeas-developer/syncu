@@ -58,16 +58,18 @@ class CoachWattsApiClient(private val token: String) {
 
             if (response.isSuccessful) {
                 val json = response.body?.string()
+                Log.d("CoachWattsApi", "GET success for $dateStr: $json")
                 Result.success(json)
             } else if (response.code == 404) {
+                Log.d("CoachWattsApi", "GET 404 (No data) for $dateStr")
                 Result.success(null)
             } else {
                 val errorMsg = response.body?.string() ?: response.message
-                Log.e("CoachWattsApi", "GET failed (${response.code}): $errorMsg")
+                Log.e("CoachWattsApi", "GET failed (${response.code}) for $dateStr: $errorMsg")
                 Result.failure(IOException("HTTP ${response.code}: $errorMsg"))
             }
         } catch (e: Exception) {
-            Log.e("CoachWattsApi", "Network error", e)
+            Log.e("CoachWattsApi", "Network error on GET", e)
             Result.failure(e)
         }
     }
@@ -80,6 +82,8 @@ class CoachWattsApiClient(private val token: String) {
             val wellnessData = summary.toCoachWattsWellness()
             val json = gson.toJson(wellnessData)
             
+            Log.d("CoachWattsApi", "Uploading for ${summary.date}: $json")
+            
             val requestBody = json.toRequestBody("application/json; charset=utf-8".toMediaType())
 
             val request = Request.Builder()
@@ -91,11 +95,11 @@ class CoachWattsApiClient(private val token: String) {
 
             if (response.isSuccessful) {
                 val responseBody = response.body?.string() ?: ""
-                Log.i("CoachWattsApi", "Upload successful for ${summary.date}")
+                Log.i("CoachWattsApi", "Upload success for ${summary.date}: $responseBody")
                 Result.success(responseBody)
             } else {
                 val errorBody = response.body?.string() ?: ""
-                Log.e("CoachWattsApi", "Upload failed (${response.code}): $errorBody")
+                Log.e("CoachWattsApi", "Upload failed (${response.code}) for ${summary.date}: $errorBody")
                 Result.failure(IOException("Upload failed: ${response.code} $errorBody"))
             }
         } catch (e: Exception) {
@@ -123,6 +127,9 @@ fun DailySummary.toCoachWattsWellness(): Map<String, Any?> {
         "diastolic" to diastolicBP,
         "glucose" to glucoseMmol,
         "vo2max" to vo2Max,
+        "activeCaloriesBurned" to caloriesBurned?.toInt(),
+        "totalCaloriesBurned" to null,
+        "steps" to steps,
         "sleepSecs" to effectiveSleepMinutes?.let { it * 60 },
         "sleepHours" to effectiveSleepMinutes?.let { it / 60.0 },
         "sleepDeepSecs" to sleep?.deepSleepMinutes?.let { it * 60 },

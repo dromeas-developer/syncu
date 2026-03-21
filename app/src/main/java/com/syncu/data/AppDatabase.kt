@@ -16,11 +16,11 @@ import java.time.Instant
 import java.time.LocalDate
 
 /**
- * Room Database - Version 11: Added avgSleepingHR to coachwatts_wellness_records
+ * Room Database - Version 13: Removed lean mass and bone mass columns for incremental schema cleanup
  */
 @Database(
     entities = [Activity::class, SleepSession::class, DailyWellnessRecord::class, IntervalsWellnessRecord::class, CoachWattsWellnessRecord::class],
-    version = 11,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -36,7 +36,6 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // Migration from version 1 to 2
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE activities ADD COLUMN manuallyEdited INTEGER NOT NULL DEFAULT 0")
@@ -46,21 +45,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 2 to 3
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE sleep_sessions ADD COLUMN stageIntervals TEXT")
             }
         }
 
-        // Migration from version 3 to 4
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE sleep_sessions ADD COLUMN asleepDurationMinutes INTEGER")
             }
         }
 
-        // Migration from version 4 to 5
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
@@ -90,7 +86,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 5 to 6
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
@@ -121,14 +116,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 6 to 7: Add lastSyncedAt to intervals_wellness_records
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE intervals_wellness_records ADD COLUMN lastSyncedAt INTEGER")
             }
         }
 
-        // Migration from version 8 to 9: Add coachwatts_wellness_records
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
@@ -158,17 +151,44 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 9 to 10: Add lastSyncedAt to coachwatts_wellness_records
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE coachwatts_wellness_records ADD COLUMN lastSyncedAt INTEGER")
             }
         }
 
-        // Migration from version 10 to 11: Add avgSleepingHR to coachwatts_wellness_records
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE coachwatts_wellness_records ADD COLUMN avgSleepingHR REAL")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE coachwatts_wellness_records ADD COLUMN totalCalories REAL")
+            }
+        }
+
+        // Migration 12 -> 13: Remove lean mass and bone mass columns from all tables
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 1. daily_wellness_records
+                database.execSQL("CREATE TABLE daily_wellness_records_new (date TEXT PRIMARY KEY NOT NULL, steps INTEGER, caloriesBurned REAL, activeMinutes INTEGER, restingHR INTEGER, maxHR INTEGER, hrvMs REAL, weightKg REAL, bodyFatPercentage REAL, spo2Percentage REAL, glucoseMmol REAL, systolicBP INTEGER, diastolicBP INTEGER, vo2Max REAL, respiratoryRate REAL, lastUpdated INTEGER NOT NULL)")
+                database.execSQL("INSERT INTO daily_wellness_records_new (date, steps, caloriesBurned, activeMinutes, restingHR, maxHR, hrvMs, weightKg, bodyFatPercentage, spo2Percentage, glucoseMmol, systolicBP, diastolicBP, vo2Max, respiratoryRate, lastUpdated) SELECT date, steps, caloriesBurned, activeMinutes, restingHR, maxHR, hrvMs, weightKg, bodyFatPercentage, spo2Percentage, glucoseMmol, systolicBP, diastolicBP, vo2Max, respiratoryRate, lastUpdated FROM daily_wellness_records")
+                database.execSQL("DROP TABLE daily_wellness_records")
+                database.execSQL("ALTER TABLE daily_wellness_records_new RENAME TO daily_wellness_records")
+
+                // 2. intervals_wellness_records
+                database.execSQL("CREATE TABLE intervals_wellness_records_new (date TEXT PRIMARY KEY NOT NULL, weight REAL, restingHR INTEGER, hrv REAL, kcalConsumed INTEGER, sleepSecs INTEGER, avgSleepingHR REAL, spO2 REAL, systolic INTEGER, diastolic INTEGER, bloodGlucose REAL, bodyFat REAL, vo2max REAL, steps INTEGER, respiration REAL, carbohydrates REAL, protein REAL, fatTotal REAL, lastUpdated INTEGER NOT NULL, lastSyncedAt INTEGER)")
+                database.execSQL("INSERT INTO intervals_wellness_records_new (date, weight, restingHR, hrv, kcalConsumed, sleepSecs, avgSleepingHR, spO2, systolic, diastolic, bloodGlucose, bodyFat, vo2max, steps, respiration, carbohydrates, protein, fatTotal, lastUpdated, lastSyncedAt) SELECT date, weight, restingHR, hrv, kcalConsumed, sleepSecs, avgSleepingHR, spO2, systolic, diastolic, bloodGlucose, bodyFat, vo2max, steps, respiration, carbohydrates, protein, fatTotal, lastUpdated, lastSyncedAt FROM intervals_wellness_records")
+                database.execSQL("DROP TABLE intervals_wellness_records")
+                database.execSQL("ALTER TABLE intervals_wellness_records_new RENAME TO intervals_wellness_records")
+
+                // 3. coachwatts_wellness_records
+                database.execSQL("CREATE TABLE coachwatts_wellness_records_new (date TEXT PRIMARY KEY NOT NULL, weight REAL, restingHR INTEGER, hrv REAL, sleepMinutes INTEGER, avgSleepingHR REAL, spO2 REAL, systolic INTEGER, diastolic INTEGER, glucose REAL, bodyFat REAL, vo2max REAL, steps INTEGER, respiration REAL, calories REAL, totalCalories REAL, carbs REAL, protein REAL, fat REAL, lastUpdated INTEGER NOT NULL, lastSyncedAt INTEGER)")
+                database.execSQL("INSERT INTO coachwatts_wellness_records_new (date, weight, restingHR, hrv, sleepMinutes, avgSleepingHR, spO2, systolic, diastolic, glucose, bodyFat, vo2max, steps, respiration, calories, totalCalories, carbs, protein, fat, lastUpdated, lastSyncedAt) SELECT date, weight, restingHR, hrv, sleepMinutes, avgSleepingHR, spO2, systolic, diastolic, glucose, bodyFat, vo2max, steps, respiration, calories, totalCalories, carbs, protein, fat, lastUpdated, lastSyncedAt FROM coachwatts_wellness_records")
+                database.execSQL("DROP TABLE coachwatts_wellness_records")
+                database.execSQL("ALTER TABLE coachwatts_wellness_records_new RENAME TO coachwatts_wellness_records")
             }
         }
 
@@ -182,7 +202,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, 
                         MIGRATION_5_6, MIGRATION_6_7, MIGRATION_8_9, MIGRATION_9_10, 
-                        MIGRATION_10_11
+                        MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
                     )
                     .fallbackToDestructiveMigration()
                     .build()

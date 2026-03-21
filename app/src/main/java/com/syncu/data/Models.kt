@@ -55,6 +55,7 @@ data class DailySummary(
     val activities: List<Activity> = emptyList(),
     val steps: Int? = null,
     val caloriesBurned: Double? = null,
+    val basalCalories: Double? = null, 
     val proteinGrams: Double? = null, 
     val carbsGrams: Double? = null,    
     val fatGrams: Double? = null,      
@@ -65,8 +66,6 @@ data class DailySummary(
     val hrvMs: Double? = null,
     val weightKg: Double? = null,
     val bodyFatPercentage: Double? = null,
-    val leanBodyMassKg: Double? = null,
-    val boneMassKg: Double? = null,
     val spo2Percentage: Double? = null,
     val glucoseMmol: Double? = null,
     val systolicBP: Int? = null,
@@ -75,7 +74,7 @@ data class DailySummary(
     val respiratoryRate: Double? = null,
     val dataProvenance: DataProvenance? = null,
     val intervalsWellness: IntervalsWellnessData? = null, 
-    val coachWattsWellness: CoachWattsWellnessData? = null, // Added for CoachWatts comparison
+    val coachWattsWellness: CoachWattsWellnessData? = null,
     val grantedPermissions: Set<String> = emptySet()
 )
 

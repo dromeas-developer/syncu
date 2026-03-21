@@ -262,6 +262,21 @@ class HealthConnectManager(private val context: Context) {
         } catch (e: Exception) { 0.0 }
     }
 
+    suspend fun getBasalCaloriesForDate(date: LocalDate): Double {
+        if (!hasReadPermission(BasalMetabolicRateRecord::class)) return 0.0
+        return try {
+            val startInstant = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endInstant = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val response = healthConnectClient.aggregate(
+                AggregateRequest(
+                    metrics = setOf(BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant)
+                )
+            )
+            response[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+        } catch (e: Exception) { 0.0 }
+    }
+
     suspend fun getActiveMinutesForDate(date: LocalDate): Int = 0
 
     suspend fun isAvailable(): Boolean = 

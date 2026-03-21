@@ -43,9 +43,7 @@ class ExtendedHealthConnectManager(private val context: Context) {
             HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(BloodGlucoseRecord::class),
-            HealthPermission.getReadPermission(RespiratoryRateRecord::class),
-            HealthPermission.getReadPermission(BoneMassRecord::class),
-            HealthPermission.getReadPermission(LeanBodyMassRecord::class)
+            HealthPermission.getReadPermission(RespiratoryRateRecord::class)
         )
     }
 
@@ -153,24 +151,6 @@ class ExtendedHealthConnectManager(private val context: Context) {
             }.getOrNull()
         } else null
 
-        val boneMass = if (hasPermission(BoneMassRecord::class)) {
-            runCatching {
-                val records = healthConnectClient.readRecords(
-                    ReadRecordsRequest(BoneMassRecord::class, timeRange)
-                ).records
-                records.firstOrNull()?.mass?.inKilograms
-            }.getOrNull()
-        } else null
-
-        val leanMass = if (hasPermission(LeanBodyMassRecord::class)) {
-            runCatching {
-                val records = healthConnectClient.readRecords(
-                    ReadRecordsRequest(LeanBodyMassRecord::class, timeRange)
-                ).records
-                records.firstOrNull()?.mass?.inKilograms
-            }.getOrNull()
-        } else null
-
         // Max Heart Rate from Daily Samples
         val maxHR = if (hasPermission(HeartRateRecord::class)) {
             runCatching {
@@ -205,9 +185,7 @@ class ExtendedHealthConnectManager(private val context: Context) {
             systolicBP = bp?.first,
             diastolicBP = bp?.second,
             vo2Max = vo2Max,
-            respiratoryRate = respRate,
-            boneMassKg = boneMass,
-            leanBodyMassKg = leanMass
+            respiratoryRate = respRate
         )
     }
 
