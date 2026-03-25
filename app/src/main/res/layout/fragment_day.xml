@@ -24,12 +24,13 @@
                 android:layout_gravity="center"
                 android:visibility="gone" />
 
-            <!-- Service Tabs -->
+            <!-- Service Tabs - Hidden as we show both simultaneously -->
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tabLayoutServices"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
+                android:visibility="gone"
                 app:tabMode="fixed"
                 app:tabGravity="fill" />
 
@@ -64,19 +65,22 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:id="@+id/ivServiceIcon" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Intervals" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@drawable/ic_syncu_logo" android:contentDescription="CoachWatts" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSteps" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Steps" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSteps" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvStepsIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivStepsIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivStepsCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowCalories" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Calories (kcal)" android:textStyle="bold" />
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Calories" android:textStyle="bold" />
                             <TextView android:id="@+id/tvCalories" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvCaloriesIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivCaloriesIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivCaloriesCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -107,43 +111,50 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:id="@+id/ivServiceIconVitals" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@mipmap/ic_intervals_icon" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@drawable/ic_syncu_logo" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSystolic" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Systolic" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSystolic" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvSystolicIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivSystolicIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivSystolicCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowDiastolic" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Diastolic" android:textStyle="bold" />
                             <TextView android:id="@+id/tvDiastolic" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvDiastolicIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivDiastolicIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivDiastolicCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSpO2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="SpO2 (%)" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSpO2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvSpO2Intervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivSpO2Intervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivSpO2CoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowBloodGlucose" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Glucose" android:textStyle="bold" />
                             <TextView android:id="@+id/tvBloodGlucose" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvBloodGlucoseIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivBloodGlucoseIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivBloodGlucoseCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowVO2Max" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="VO2 Max" android:textStyle="bold" />
                             <TextView android:id="@+id/tvVO2Max" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvVO2MaxIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivVO2MaxIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivVO2MaxCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowRespiratoryRate" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Resp Rate" android:textStyle="bold" />
                             <TextView android:id="@+id/tvRespiratoryRate" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvRespiratoryRateIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivRespiratoryRateIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivRespiratoryRateCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -174,25 +185,29 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:id="@+id/ivServiceIconHeart" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@mipmap/ic_intervals_icon" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@drawable/ic_syncu_logo" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowRestingHR" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Rest HR" android:textStyle="bold" />
                             <TextView android:id="@+id/tvRestingHR" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvRestingHRIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivRestingHRIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivRestingHRCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSleepHR" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Sleep HR" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSleepHR" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvSleepHRIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivSleepHRIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivSleepHRCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowHRV" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="HRV (ms)" android:textStyle="bold" />
                             <TextView android:id="@+id/tvHRV" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvHRVIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivHRVIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivHRVCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -223,31 +238,22 @@
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:id="@+id/ivServiceIconBody" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@mipmap/ic_intervals_icon" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@drawable/ic_syncu_logo" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowWeight" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Weight (kg)" android:textStyle="bold" />
                             <TextView android:id="@+id/tvWeight" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvWeightIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivWeightIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivWeightCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowBodyFat" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Fat (%)" android:textStyle="bold" />
                             <TextView android:id="@+id/tvBodyFat" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvBodyFatIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                        </LinearLayout>
-
-                        <LinearLayout android:id="@+id/rowLeanBodyMass" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Lean (kg)" android:textStyle="bold" />
-                            <TextView android:id="@+id/tvLeanBodyMass" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvLeanBodyMassIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                        </LinearLayout>
-
-                        <LinearLayout android:id="@+id/rowBoneMass" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Bone (kg)" android:textStyle="bold" />
-                            <TextView android:id="@+id/tvBoneMass" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvBoneMassIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivBodyFatIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivBodyFatCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -276,43 +282,41 @@
 
                     <LinearLayout android:id="@+id/contentSleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:visibility="gone">
 
-                        <!-- Summary Header (Duration comparison) -->
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingBottom="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" />
                             <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_health_connect_icon" android:contentDescription="HC" android:scaleType="centerInside" />
-                            <ImageView android:id="@+id/ivServiceIconSleep" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1" android:src="@mipmap/ic_intervals_icon" android:contentDescription="Service" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@mipmap/ic_intervals_icon" android:scaleType="centerInside" />
+                            <ImageView android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="0.3" android:src="@drawable/ic_syncu_logo" android:scaleType="centerInside" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSleepDuration" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Time in Bed" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSleepDuration" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvSleepDurationIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivSleepDurationIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivSleepDurationCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
                         <LinearLayout android:id="@+id/rowSleepAsleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
                             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Asleep" android:textStyle="bold" />
                             <TextView android:id="@+id/tvSleepAsleep" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
-                            <TextView android:id="@+id/tvSleepAsleepIntervals" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="--" />
+                            <ImageView android:id="@+id/ivSleepAsleepIntervals" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
+                            <ImageView android:id="@+id/ivSleepAsleepCoachWatts" android:layout_width="0dp" android:layout_height="18dp" android:layout_weight="0.3" android:src="@drawable/ic_synced" android:visibility="invisible" />
                         </LinearLayout>
 
-                        <!-- Discrete Divider -->
                         <View
                             android:layout_width="match_parent" android:layout_height="1dp"
                             android:layout_marginTop="4dp" android:layout_marginBottom="12dp"
                             android:background="#1A8E8E93" />
 
-                        <!-- Sleep Timeline Chart -->
                         <com.syncu.ui.SleepChartView
                             android:id="@+id/sleepChartView"
                             android:layout_width="match_parent" android:layout_height="180dp"
                             android:layout_marginBottom="16dp" />
 
-                        <!-- Detailed breakdown items -->
                         <LinearLayout
                             android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:orientation="vertical" android:paddingTop="8dp">
 
-                            <!-- Awake Row -->
                             <LinearLayout android:id="@+id/rowSleepAwakeDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#FFFFFF" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Awake" android:textColor="#8E8E93" />
@@ -320,7 +324,6 @@
                                 <TextView android:id="@+id/tvSleepAwakePercent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--%" android:textColor="#8E8E93" />
                             </LinearLayout>
 
-                            <!-- REM Row -->
                             <LinearLayout android:id="@+id/rowSleepREMDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#4FC3F7" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="REM" android:textColor="#8E8E93" />
@@ -328,7 +331,6 @@
                                 <TextView android:id="@+id/tvSleepREMPercent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--%" android:textColor="#8E8E93" />
                             </LinearLayout>
 
-                            <!-- Light Row -->
                             <LinearLayout android:id="@+id/rowSleepLightDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#1E88E5" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Light" android:textColor="#8E8E93" />
@@ -336,7 +338,6 @@
                                 <TextView android:id="@+id/tvSleepLightPercent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--%" android:textColor="#8E8E93" />
                             </LinearLayout>
 
-                            <!-- Deep Row -->
                             <LinearLayout android:id="@+id/rowSleepDeepDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp">
                                 <View android:layout_width="12dp" android:layout_height="12dp" android:background="#154391" android:layout_marginEnd="12dp" />
                                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Deep" android:textColor="#8E8E93" />

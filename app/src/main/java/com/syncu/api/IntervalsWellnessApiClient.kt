@@ -13,6 +13,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 /**
  * intervals.icu Wellness API Client
@@ -150,8 +151,6 @@ fun DailySummary.toIntervalsWellness(): Map<String, Any?> {
     fun Int?.nullIfZero(): Int? = if (this == 0) null else this
     fun Double?.nullIfZero(): Double? = if (this == null || this == 0.0) null else this
 
-    // We build a map instead of a data class to have full control over keys
-    // and exclude fields like boneMass and leanMass that are causing 422 errors.
     return mapOf(
         "id" to this.date.format(formatter),
         "restingHR" to this.restingHR.nullIfZero(),
@@ -166,7 +165,7 @@ fun DailySummary.toIntervalsWellness(): Map<String, Any?> {
         "diastolic" to this.diastolicBP.nullIfZero(),
         "bloodGlucose" to this.glucoseMmol.nullIfZero(),
         "respiration" to this.respiratoryRate.nullIfZero(),
-        "kcalConsumed" to this.caloriesBurned?.toInt().nullIfZero(),
+        "kcalConsumed" to this.caloriesBurned?.roundToInt().nullIfZero(),
         "steps" to this.steps.nullIfZero(),
         "carbohydrates" to this.carbsGrams.nullIfZero(),
         "protein" to this.proteinGrams.nullIfZero(),

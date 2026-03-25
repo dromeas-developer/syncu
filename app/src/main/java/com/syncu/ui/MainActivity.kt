@@ -15,13 +15,10 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.syncu.R
-import com.syncu.api.HealthConnectManager
-import com.syncu.api.ExtendedHealthConnectManager
 import com.syncu.sync.SyncWorker
 import com.syncu.data.AppDatabase
 import com.syncu.utils.PreferencesManager
@@ -165,8 +162,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupSystemBars() {
         val rootLayout = findViewById<View>(R.id.viewPager).parent as ViewGroup
         val headerLayout = rootLayout.getChildAt(0)
-        val lastSyncText = findViewById<View>(R.id.tvLastSync)
-        val footerLayout = rootLayout.getChildAt(3) // Adjusted index for tvLastSync
+        val footerLayout = rootLayout.getChildAt(3)
 
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -226,11 +222,17 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val database = AppDatabase.getDatabase(applicationContext, charArrayOf())
-                val record = database.intervalsDao().getWellnessForDate(date)
-                val lastSynced = record?.lastSyncedAt
+                val intRecord = database.intervalsDao().getWellnessForDate(date)
+                val cwRecord = database.coachWattsDao().getWellnessForDate(date)
                 
-                if (lastSynced != null) {
-                    val dateTime = lastSynced.atZone(ZoneId.systemDefault()).toLocalDateTime()
+                val intSync = intRecord?.lastSyncedAt
+                val cwSync = cwRecord?.lastSyncedAt
+                
+                // Find the most recent sync time among all services
+                val latestSync = listOfNotNull(intSync, cwSync).maxOrNull()
+                
+                if (latestSync != null) {
+                    val dateTime = latestSync.atZone(ZoneId.systemDefault()).toLocalDateTime()
                     val formatter = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault())
                     setLastSyncText("Last sync: ${dateTime.format(formatter)}")
                 } else {

@@ -13,6 +13,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 /**
  * CoachWatts API Client
@@ -127,7 +128,7 @@ fun DailySummary.toCoachWattsWellness(): Map<String, Any?> {
         "diastolic" to diastolicBP,
         "glucose" to glucoseMmol,
         "vo2max" to vo2Max,
-        "activeCaloriesBurned" to caloriesBurned?.toInt(),
+        "activeCaloriesBurned" to caloriesBurned?.roundToInt(),
         "totalCaloriesBurned" to null,
         "steps" to steps,
         "sleepSecs" to effectiveSleepMinutes?.let { it * 60 },

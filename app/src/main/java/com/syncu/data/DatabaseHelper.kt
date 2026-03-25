@@ -214,7 +214,7 @@ class DatabaseHelper(
         
         val permissions = healthManager.getGrantedPermissions()
         fun has(recordType: KClass<out androidx.health.connect.client.records.Record>) = 
-            permissions.contains(HealthPermission.getReadPermission(recordType).toString())
+            permissions.contains(HealthPermission.getReadPermission(recordType))
 
         val sleepList = database.sleepDao().getSleepForDateRange(startOfDay.toEpochMilli(), endOfDay.toEpochMilli())
         var sleep = sleepList.firstOrNull()
